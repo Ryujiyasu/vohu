@@ -424,6 +424,14 @@ Identity and distribution infrastructure:
 - Tools for Humanity (2025). [*Mini Apps 1.2 & Developer Rewards.*](https://world.org/blog/announcements/world-launches-mini-apps-300k-dev-rewards-pilot-inspire-human-first-apps) — the World App distribution channel.
 - Sign-In With Ethereum — [EIP-4361](https://eips.ethereum.org/EIPS/eip-4361). — the SIWE scheme MiniKit's `walletAuth` implements for account binding.
 
+## Organic usage during World Build 3
+
+![4 verified humans voted, tally revealed by trustees](./docs/screenshots/organic-usage-2026-04-24.png)
+
+Captured 2026-04-24, during the World Build 3 hackathon period and before this was shared publicly. Four Orb-verified humans, none of whom I invited, discovered vohu through the World App Mini App directory, cleared the full double-auth (`verifyCloudProof` + Secure-Enclave signature), cast encrypted ballots, and at least two distinct trustees hit `/trustee?p=demo-2026-04&i=…` to produce partial decryptions — enough to reveal the aggregate under the 2-of-3 threshold. The server logs a count; it has no way to tell who voted for what.
+
+`demo-2026-04` has since been cleared for a clean demo reset. The four ballots above are captured here as a real-world end-to-end integration test.
+
 ## Credits
 
 Built by [Ryuji Yasukochi](https://github.com/Ryujiyasu) (CTO, [M2Labo](https://m2labo.co.jp)) during the World Build 3 online hackathon, April 2026.

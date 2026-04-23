@@ -376,6 +376,14 @@ Identity / 配信インフラ:
 - Tools for Humanity (2026). [*World ID 4.0 — Proof of Personhood.*](https://world.org/world-id)
 - Tools for Humanity (2025). [*Mini Apps 1.2 & Developer Rewards.*](https://world.org/blog/announcements/world-launches-mini-apps-300k-dev-rewards-pilot-inspire-human-first-apps)
 
+## World Build 3 期間中の organic usage
+
+![4 名の検証済み人間が投票、trustee が tally を reveal](./docs/screenshots/organic-usage-2026-04-24.png)
+
+2026-04-24 撮影、World Build 3 ハッカソン期間中、私がまだ公に共有していないタイミング。招待していない 4 名の Orb 検証済み人間が World App の Mini App ディレクトリから vohu を発見、double-auth（`verifyCloudProof` + Secure Enclave 署名）を通過、暗号化投票を送信、2 名以上の trustee が `/trustee?p=demo-2026-04&i=…` を叩いて部分復号を提出 — 2-of-3 閾値に到達して aggregate が reveal された。サーバーは票数しか知らない、誰が何に投票したかは復号できない。
+
+`demo-2026-04` はデモ用にクリア済。上の 4 票は本番 E2E 統合テストの痕跡として残している。
+
 ## クレジット
 
 World Build 3 オンラインハッカソン（2026 年 4 月）期間中に [Ryuji Yasukochi](https://github.com/Ryujiyasu)（CTO, [M2Labo](https://m2labo.co.jp)）が作成。
