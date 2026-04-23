@@ -4,28 +4,45 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
-
-const PROPOSAL = {
-  id: 'demo-2026-04',
-  title: 'Should the World ecosystem prioritize privacy primitives in 2026?',
-  options: [
-    { id: 'yes', label: 'Yes — privacy is foundational' },
-    { id: 'no', label: 'No — focus on growth first' },
-    { id: 'mixed', label: 'Mixed — depends on use case' },
-  ],
-};
+import {
+  deserializePublicKey,
+  encryptBallot,
+  SerializedPublicKey,
+} from '@/lib/tally';
+import { DEMO_PROPOSAL, Proposal } from '@/lib/proposal';
 
 const PROPOSAL_PLAINTEXT =
-  PROPOSAL.title + '\n' + PROPOSAL.options.map(o => o.label).join('\n');
+  DEMO_PROPOSAL.title + '\n' + DEMO_PROPOSAL.options.map(o => o.label).join('\n');
 
 export default function VotePage() {
   const isHuman = useInVerifiedHumanContext();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [stage, setStage] = useState<string | null>(null);
-  const [nullifier, setNullifier] = useState<string | null>(null);
   const router = useRouter();
 
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [pubKey, setPubKey] = useState<SerializedPublicKey | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [stage, setStage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [nullifier, setNullifier] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Pull proposal metadata + Paillier public key.
+  useEffect(() => {
+    if (isHuman !== true) return;
+    fetch(`/api/proposal?proposalId=${encodeURIComponent(DEMO_PROPOSAL.id)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.proposal && d.publicKey) {
+          setProposal(d.proposal);
+          setPubKey(d.publicKey);
+        } else {
+          setError(d.error ?? 'failed to load proposal');
+        }
+      })
+      .catch(e => setError(String(e)));
+  }, [isHuman]);
+
+  // Gate: must have already verified on `/`.
   useEffect(() => {
     if (isHuman !== true) return;
     const n = sessionStorage.getItem('nullifier');
@@ -41,22 +58,22 @@ export default function VotePage() {
   }
 
   const handleVote = async () => {
-    if (!selected || !nullifier) return;
+    if (!selected || !nullifier || !proposal || !pubKey) return;
     setSubmitting(true);
+    setError(null);
 
-    setStage('Generating cryptographic commitment…');
-    await new Promise(r => setTimeout(r, 500));
+    setStage('Fetching election public key…');
+    const pk = deserializePublicKey(pubKey);
+    const choiceIdx = proposal.options.findIndex(o => o.id === selected);
+    if (choiceIdx < 0) {
+      setError('invalid choice');
+      setSubmitting(false);
+      setStage(null);
+      return;
+    }
 
-    setStage('Encrypting ballot with hyde…');
-    await new Promise(r => setTimeout(r, 600));
-
-    const mockEncrypted = btoa(
-      JSON.stringify({
-        vote: selected,
-        timestamp: Date.now(),
-        nonce: Math.random().toString(36).slice(2),
-      })
-    );
+    setStage('Encrypting ballot (Paillier)…');
+    const ciphertextVec = encryptBallot(pk, choiceIdx, proposal.options.length);
 
     setStage('Submitting ciphertext…');
     try {
@@ -64,34 +81,38 @@ export default function VotePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          proposalId: PROPOSAL.id,
+          proposalId: proposal.id,
           nullifier,
-          ciphertext: mockEncrypted,
+          ciphertextVec,
         }),
       });
       if (res.ok) {
-        router.push(`/result/${PROPOSAL.id}`);
+        router.push(`/result/${proposal.id}`);
       } else {
         const body = await res.json().catch(() => ({}));
+        setError(body.error ?? `server returned ${res.status}`);
         setStage(null);
-        alert(body.error ?? 'Vote submission failed');
         setSubmitting(false);
       }
     } catch (e) {
-      console.error(e);
+      setError(String(e));
       setStage(null);
       setSubmitting(false);
     }
   };
 
+  const p = proposal ?? DEMO_PROPOSAL;
+
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
       <div className="max-w-md mx-auto pt-12">
-        <div className="mb-2 text-xs text-emerald-400 font-mono">✓ HUMAN VERIFIED</div>
-        <h1 className="text-2xl font-bold mb-8 leading-snug">{PROPOSAL.title}</h1>
+        <div className="mb-2 text-xs text-emerald-400 font-mono">
+          ✓ HUMAN VERIFIED
+        </div>
+        <h1 className="text-2xl font-bold mb-8 leading-snug">{p.title}</h1>
 
         <div className="space-y-3 mb-8">
-          {PROPOSAL.options.map(opt => (
+          {p.options.map(opt => (
             <button
               key={opt.id}
               onClick={() => setSelected(opt.id)}
@@ -109,15 +130,20 @@ export default function VotePage() {
 
         <button
           onClick={handleVote}
-          disabled={!selected || submitting}
+          disabled={!selected || submitting || !pubKey}
           className="w-full py-4 bg-white text-black rounded-full font-semibold disabled:opacity-30 active:scale-95 transition-transform"
         >
-          {stage ?? 'Cast encrypted vote'}
+          {stage ?? (pubKey ? 'Cast encrypted vote' : 'Loading…')}
         </button>
 
+        {error && (
+          <p className="mt-4 text-sm text-rose-400 text-center">{error}</p>
+        )}
+
         <p className="mt-6 text-xs text-slate-500 text-center leading-relaxed">
-          🔒 Your vote is encrypted on this device.<br />
-          The server only sees ciphertext.
+          🔒 Your ballot is encrypted on this device under the election&apos;s
+          Paillier public key.<br />
+          The server aggregates homomorphically — it never decrypts your vote.
         </p>
       </div>
     </main>

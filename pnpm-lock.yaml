@@ -14,12 +14,18 @@ importers:
       '@worldcoin/minikit-js':
         specifier: 1.11.0
         version: 1.11.0(@types/react@19.2.14)(react@19.2.4)(typescript@5.9.3)(viem@2.48.2(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+      bigint-conversion:
+        specifier: ^2.4.3
+        version: 2.4.3
       hyde-wasm:
         specifier: file:./vendor/hyde-wasm
         version: file:vendor/hyde-wasm
       next:
         specifier: 16.2.4
         version: 16.2.4(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      paillier-bigint:
+        specifier: ^3.4.3
+        version: 3.4.3
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -363,6 +369,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@juanelas/base64@1.1.5':
+    resolution: {integrity: sha512-mjAF27LzwfYobdwqnxZgeucbKT5wRRNvILg3h5OvCWK+3F7mw/A1tnjHnNiTYtLmTvT/bM1jA5AX7eQawDGs1w==}
 
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
@@ -874,6 +883,13 @@ packages:
     resolution: {integrity: sha512-1AaXxEPfXT+GvTBJFuy4yXVHWJBXa4OdbIebGN/wX5DlsIkU0+wzGnd2lOzokSk51d5LUmqjgBLRLlypLUqInQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  bigint-conversion@2.4.3:
+    resolution: {integrity: sha512-eM76IXlhXQD6HAoE6A7QLQ3jdC04EJdjH3zrlU1Jtt4/jj+O/pMGjGR5FY8/55FOIBsK25kly0RoG4GA4iKdvg==}
+
+  bigint-crypto-utils@3.3.0:
+    resolution: {integrity: sha512-jOTSb+drvEDxEq6OuUybOAv/xxoh3cuYRUIPyu8sSHQNKM303UQ2R1DAo45o1AkcIXw6fzbaFI1+xGGdaXs2lg==}
+    engines: {node: '>=14.0.0'}
 
   brace-expansion@1.1.14:
     resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
@@ -1729,6 +1745,10 @@ packages:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
 
+  paillier-bigint@3.4.3:
+    resolution: {integrity: sha512-82otV7H/gBiQeYjsmc/Zo029GoJDnAFyoMWQMsUgfya50W8dYRVgvUR/lHO0yrS7MfMwgE8fCeEIBF0IucLYFw==}
+    engines: {node: '>=12'}
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -2409,6 +2429,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@juanelas/base64@1.1.5': {}
+
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.10.0
@@ -2879,6 +2901,12 @@ snapshots:
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.10.20: {}
+
+  bigint-conversion@2.4.3:
+    dependencies:
+      '@juanelas/base64': 1.1.5
+
+  bigint-crypto-utils@3.3.0: {}
 
   brace-expansion@1.1.14:
     dependencies:
@@ -3883,6 +3911,10 @@ snapshots:
   p-locate@5.0.0:
     dependencies:
       p-limit: 3.1.0
+
+  paillier-bigint@3.4.3:
+    dependencies:
+      bigint-crypto-utils: 3.3.0
 
   parent-module@1.0.1:
     dependencies:

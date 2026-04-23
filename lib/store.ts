@@ -1,35 +1,34 @@
 // Ballot storage layer.
 //
-// - In production (Vercel): backed by Upstash Redis. Survives cold starts,
+// - Production (Vercel): backed by Upstash Redis. Survives cold starts,
 //   shared across invocations.
-// - In local dev / CI: falls back to an in-memory Map so the project runs
-//   without any credentials set.
+// - Local dev / CI: falls back to an in-memory Map.
 //
-// The store is deliberately simple: a set of seen nullifiers per proposal
-// (for Sybil-resistance dedup) and an ordered list of ciphertexts per proposal
-// (for aggregate retrieval). The server never sees plaintext ballots.
+// Data model (per proposal):
+//   SET  vohu:proposal:<id>:nullifiers      -> used to dedup Sybil
+//   LIST vohu:proposal:<id>:ballots         -> JSON { nullifier, ciphertextVec[], receivedAt }
+//
+// The server NEVER decrypts individual ciphertexts. Aggregation is done
+// homomorphically in /lib/tally.ts; only the aggregate is decrypted at
+// result time.
 
 import { Redis } from '@upstash/redis';
 
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const USE_REDIS = Boolean(REDIS_URL && REDIS_TOKEN);
+const redis =
+  REDIS_URL && REDIS_TOKEN
+    ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN })
+    : null;
 
-const redis = USE_REDIS
-  ? new Redis({ url: REDIS_URL!, token: REDIS_TOKEN! })
-  : null;
-
-// ---------- In-memory fallback (dev only) ----------
-
-const memBallots = new Map<string, string[]>();
+const memBallots = new Map<string, BallotRecord[]>();
 const memNullifiers = new Map<string, Set<string>>();
 
-// ---------- Public API ----------
-
-export interface Ballot {
+export interface BallotRecord {
   nullifier: string;
-  ciphertext: string;
+  /** Paillier-encrypted ballot vector (hex per option). */
+  ciphertextVec: string[];
   receivedAt: number;
 }
 
@@ -37,26 +36,26 @@ const kNullifiers = (proposalId: string) =>
   `vohu:proposal:${proposalId}:nullifiers`;
 const kBallots = (proposalId: string) => `vohu:proposal:${proposalId}:ballots`;
 
-/** Returns `true` if the nullifier was newly added (vote counts), `false` if
- *  it had already voted (Sybil dedup triggered). */
+/** `true` if the nullifier was newly recorded (vote counts), `false` if it
+ *  had already voted (Sybil dedup). */
 export async function submitBallot(
   proposalId: string,
   nullifier: string,
-  ciphertext: string,
+  ciphertextVec: string[],
 ): Promise<boolean> {
+  const record: BallotRecord = {
+    nullifier,
+    ciphertextVec,
+    receivedAt: Date.now(),
+  };
+
   if (redis) {
     const added = await redis.sadd(kNullifiers(proposalId), nullifier);
     if (added === 0) return false;
-    const entry = JSON.stringify({
-      nullifier,
-      ciphertext,
-      receivedAt: Date.now(),
-    } satisfies Ballot);
-    await redis.rpush(kBallots(proposalId), entry);
+    await redis.rpush(kBallots(proposalId), JSON.stringify(record));
     return true;
   }
 
-  // In-memory fallback
   let nullSet = memNullifiers.get(proposalId);
   if (!nullSet) {
     nullSet = new Set();
@@ -64,37 +63,35 @@ export async function submitBallot(
   }
   if (nullSet.has(nullifier)) return false;
   nullSet.add(nullifier);
-
   let list = memBallots.get(proposalId);
   if (!list) {
     list = [];
     memBallots.set(proposalId, list);
   }
-  list.push(ciphertext);
+  list.push(record);
   return true;
 }
 
-/** Returns the ordered list of ciphertexts for a proposal. */
-export async function getCiphertexts(proposalId: string): Promise<string[]> {
+export async function getBallots(proposalId: string): Promise<BallotRecord[]> {
   if (redis) {
     const entries = await redis.lrange<string>(kBallots(proposalId), 0, -1);
     return entries
       .map(raw => {
         try {
-          const parsed =
-            typeof raw === 'string' ? (JSON.parse(raw) as Ballot) : (raw as unknown as Ballot);
-          return parsed.ciphertext;
+          // Upstash already parses JSON when it can; tolerate both shapes.
+          if (typeof raw === 'string') {
+            return JSON.parse(raw) as BallotRecord;
+          }
+          return raw as unknown as BallotRecord;
         } catch {
           return null;
         }
       })
-      .filter((ct): ct is string => Boolean(ct));
+      .filter((r): r is BallotRecord => Boolean(r));
   }
-
   return memBallots.get(proposalId) ?? [];
 }
 
-/** Number of ballots cast for a proposal. */
 export async function ballotCount(proposalId: string): Promise<number> {
   if (redis) {
     return await redis.scard(kNullifiers(proposalId));
@@ -102,5 +99,4 @@ export async function ballotCount(proposalId: string): Promise<number> {
   return memNullifiers.get(proposalId)?.size ?? 0;
 }
 
-/** Whether the Upstash credentials are configured. Useful for diagnostics. */
-export const isPersistent = USE_REDIS;
+export const isPersistent = Boolean(redis);
