@@ -75,6 +75,7 @@ export default function Dashboard() {
             }
             items={[
               { label: 'Cast a vote', href: '/vote' },
+              { label: 'Create a proposal (XMTP-scoped)', href: '/propose' },
               {
                 label: 'Trustee console',
                 href: `/trustee?p=${DEMO_PROPOSAL_ID}`,
