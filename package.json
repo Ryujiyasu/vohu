@@ -11,13 +11,16 @@
   "dependencies": {
     "@upstash/redis": "^1.37.0",
     "@worldcoin/minikit-js": "1.11.0",
+    "@xmtp/browser-sdk": "^7.0.0",
+    "@xmtp/node-sdk": "^6.0.0",
     "bigint-conversion": "^2.4.3",
     "bigint-crypto-utils": "^3.3.0",
     "hyde-wasm": "file:./vendor/hyde-wasm",
     "next": "16.2.4",
     "paillier-bigint": "^3.4.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "viem": "^2.48.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

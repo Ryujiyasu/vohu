@@ -286,6 +286,40 @@ Known v1 limits, called out explicitly:
 - [`argo`](https://gitlab.com/Ryujiyasu/argo) — zero-knowledge proof crate (vohu's future proof layer).
 - [`plat`](https://gitlab.com/Ryujiyasu/plat) — FHE / GPU-accelerated private computation (vohu's future tally layer).
 
+## Related work and vohu's position
+
+Prior art in privacy-preserving voting falls into three mature camps. vohu does not out-research any of them individually — it composes an opinionated subset plus a new identity primitive that didn't exist before 2024.
+
+| System | "Who is a voter?" | Ballot secrecy | Receipt-freeness | Distribution |
+|---|---|---|---|---|
+| [Helios](https://heliosvoting.org/) (Adida 2008) | Email + password — the operator knows everyone | ElGamal + threshold decryption | **Explicitly out of scope** by the paper | Web app, deployed via IACR, ACM, etc. |
+| [Vocdoni / DAVINCI](https://davinci.vote/) (2017 → 2024) | ECDSA key or ERC-20 balance | ElGamal + zk-SNARK census proof | Partial (delay-based) | Vochain / web |
+| [MACI](https://maci.pse.dev/) (Buterin / PSE 2019) | One Ethereum key per human, by assumption | ECDH + zk-SNARK | **Strong** — key-rotation-based bribery resistance | Ethereum smart contract (gas required) |
+| **vohu** | **Orb-verified World ID** — cryptographic proof-of-personhood, no operator trust | Paillier + threshold decryption | v1 none; v2 via hyde-bound receipts | Mini App in World App (400+ existing user base) |
+
+### Where vohu is genuinely different
+
+1. **Proof-of-personhood is native, not delegated.** Helios assumes the operator knows who's human. Vocdoni delegates to tokens. MACI assumes "1 Ethereum key == 1 human" as an unstated operational invariant. vohu is the first of these systems where *the protocol itself* verifies that each ballot came from a distinct human, via Orb-level World ID.
+
+2. **Paillier, not ZK.** vohu's tally is pure addition, so we use a 2048-bit Paillier cryptosystem — 40-year-old, auditable, no trusted setup, no zk-SNARK circuit. When the tally grows beyond addition (ranked-choice, quadratic, weighted delegation), the roadmap moves to lattice-based HE via [`plat`](https://gitlab.com/Ryujiyasu/plat), not a more expensive zk-SNARK.
+
+3. **`prome` — visual ciphertext on non-World-App browsers.** Same URL, two devices, two completely different experiences. Helios / Vocdoni / MACI demos are text-heavy; vohu's thesis — "the ballot is invisible to anything that isn't a verified human" — can be shown in one head-turn. This is a UX contribution, not a cryptographic one.
+
+4. **Zero install friction.** Helios requires a sign-up flow; MACI requires a wallet with gas; Vocdoni requires a dedicated app. vohu runs inside World App (40M+ verified users, [400+ Mini Apps](https://world.org/blog/announcements/world-launches-mini-apps-1-2)) — two taps from the home screen.
+
+### Honest weaknesses vs prior work
+
+- **Receipt-freeness**: MACI's key-rotation-based bribery resistance is stronger than anything vohu has today. v2 will add hyde-bound receipts (the *receipt* is device-bound so it can't be forwarded to a coercer).
+- **Scale**: Vocdoni DAVINCI targets national elections. MACI has production deployments (clr.fund). vohu is a hackathon MVP — near-term targets are small-to-medium DAOs, World Chat community votes, workplace governance.
+- **Post-quantum**: Paillier is RSA-class. MACI's SNARK side is also classical. For long-term ballot secrecy against future quantum adversaries, v2 migrates to a lattice-based HE via `plat`.
+
+### One-liner for the pitch
+
+> *Helios solved ballot secrecy in 2008 but assumed you already knew who the humans were.
+> MACI solved bribery in 2019 but assumed one Ethereum key per human.
+> Vocdoni solved scale but uses tokens as proxies for humanity.
+> vohu is the first system where "one human, one secret vote" is true at the cryptographic layer, not the operational layer — because World ID made it possible.*
+
 ## Credits
 
 Built by [Ryuji Yasukochi](https://github.com/Ryujiyasu) (CTO, [M2Labo](https://m2labo.co.jp)) during the World Build 3 online hackathon, April 2026.
