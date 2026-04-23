@@ -22,8 +22,12 @@ import {
   serializePublicKey,
 } from './tally';
 
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Same fallback chain as lib/store.ts — accept Upstash-native or
+// Vercel-KV-style env vars.
+const REDIS_URL =
+  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 const redis =
   REDIS_URL && REDIS_TOKEN

@@ -14,8 +14,13 @@
 
 import { Redis } from '@upstash/redis';
 
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+// Supports both naming conventions:
+//   - Upstash native: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+//   - Vercel KV (Marketplace Upstash): KV_REST_API_URL / KV_REST_API_TOKEN
+const REDIS_URL =
+  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
 const redis =
   REDIS_URL && REDIS_TOKEN
