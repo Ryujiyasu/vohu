@@ -20,6 +20,9 @@ importers:
       '@xmtp/node-sdk':
         specifier: ^6.0.0
         version: 6.0.0
+      argo-wasm:
+        specifier: file:./vendor/argo-wasm
+        version: file:vendor/argo-wasm
       bigint-conversion:
         specifier: ^2.4.3
         version: 2.4.3
@@ -1009,6 +1012,9 @@ packages:
   ansi-styles@4.3.0:
     resolution: {integrity: sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==}
     engines: {node: '>=8'}
+
+  argo-wasm@file:vendor/argo-wasm:
+    resolution: {directory: vendor/argo-wasm, type: directory}
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
@@ -3124,6 +3130,8 @@ snapshots:
   ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
+
+  argo-wasm@file:vendor/argo-wasm: {}
 
   argparse@2.0.1: {}
 

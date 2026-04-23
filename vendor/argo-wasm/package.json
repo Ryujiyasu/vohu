@@ -1,0 +1,31 @@
+{
+  "name": "argo-wasm",
+  "type": "module",
+  "collaborators": [
+    "Ryuji Yasukochi"
+  ],
+  "description": "WASM bindings for the argo ZKP wrapper (hyde ecosystem)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/Ryujiyasu/argo"
+  },
+  "files": [
+    "argo_wasm_bg.wasm",
+    "argo_wasm.js",
+    "argo_wasm.d.ts"
+  ],
+  "main": "argo_wasm.js",
+  "types": "argo_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "zkp",
+    "zero-knowledge",
+    "wasm",
+    "hyde",
+    "voting"
+  ]
+}

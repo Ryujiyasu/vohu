@@ -13,6 +13,7 @@
     "@worldcoin/minikit-js": "1.11.0",
     "@xmtp/browser-sdk": "^7.0.0",
     "@xmtp/node-sdk": "^6.0.0",
+    "argo-wasm": "file:./vendor/argo-wasm",
     "bigint-conversion": "^2.4.3",
     "bigint-crypto-utils": "^3.3.0",
     "hyde-wasm": "file:./vendor/hyde-wasm",

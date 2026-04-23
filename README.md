@@ -192,6 +192,7 @@ For a 3-option secret ballot, aggregation is pure addition. Paillier's additive 
 |---|---|---|
 | Identity | World ID 4.0: Orb verification, single-use nullifiers | [`@worldcoin/minikit-js`](https://www.npmjs.com/package/@worldcoin/minikit-js) (1.11) |
 | Ballot encryption | Paillier additive HE (2048-bit) | [`paillier-bigint`](https://www.npmjs.com/package/paillier-bigint) (3.4) |
+| Ballot-validity proof | [argo](https://gitlab.com/Ryujiyasu/argo) ZKP wrapper (mock today, halo2/arkworks/risc0 planned) | vendored `argo-wasm` |
 | Persistence | Upstash Redis via Vercel Marketplace | [`@upstash/redis`](https://www.npmjs.com/package/@upstash/redis) |
 | UI | Next.js 16 App Router, Tailwind v4, Turbopack | this repo |
 | Deployment | Vercel | [vohu.vercel.app](https://vohu.vercel.app) |
@@ -205,6 +206,7 @@ For a 3-option secret ballot, aggregation is pure addition. Paillier's additive 
 | `/result/[proposalId]` | Aggregate result. Shows trustee-approval progress, or decrypted tally once t-of-N approvals are in. |
 | `/trustee?p=<id>&i=<index>` | Trustee-facing approval screen. Contributes one partial decryption. |
 | `/hyde-probe` | Sanity check that hyde-wasm loads and roundtrips in the browser (v2 preflight). |
+| `/argo-probe` | Sanity check that argo-wasm loads, constructs a `vohu.ballot-validity.v1` statement, and round-trips a mock proof. Wire for the v2 proof layer. |
 | `GET /api/proposal?proposalId=…` | Proposal metadata + Paillier public key + threshold params. |
 | `POST /api/vote` | Ciphertext-only ingest, nullifier-deduplicated. |
 | `GET /api/tally?proposalId=…` | Homomorphic aggregate + combine of submitted partials. Returns `revealed: false` until threshold trustees approve. |
@@ -334,7 +336,7 @@ Same crypto ecosystem (`hyde` + `janus`), packaged as a Linux FIDO2 / WebAuthn a
 - [`hyde`](https://gitlab.com/Ryujiyasu/hyde) — TPM-bound PQC primitives (ML-KEM-768, AES-GCM), published on [crates.io](https://crates.io/crates/hyde). Used by `/hyde-probe` and planned for v2 non-transferable receipts.
 - [`janus`](https://gitlab.com/Ryujiyasu/janus) — cross-platform person-binding trait layer (presence assertion via biometrics / PIN / FIDO2).
 - [`hyde-webauthn`](https://gitlab.com/Ryujiyasu/hyde-webauthn) — virtual FIDO2 authenticator for Linux.
-- [`argo`](https://gitlab.com/Ryujiyasu/argo) — zero-knowledge proof crate (vohu's future proof layer).
+- [`argo`](https://gitlab.com/Ryujiyasu/argo) — zero-knowledge proof wrapper over halo2 / arkworks / risc0. Ships vohu's `vohu.ballot-validity.v1` statement shape; wired today via `/argo-probe` with the mock backend, swapping in a real backend is a config change.
 - [`plat`](https://gitlab.com/Ryujiyasu/plat) — FHE / GPU-accelerated private computation (vohu's future tally layer).
 
 ## Related work and vohu's position
