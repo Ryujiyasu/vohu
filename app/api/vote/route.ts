@@ -121,12 +121,44 @@ export async function POST(req: NextRequest) {
   }
   const proofResult = await verifyCloudProof(worldIdProof, appId, action);
   if (!proofResult.success) {
+    const code = proofResult.code ?? 'unknown';
+    // Map World ID's cloud-side codes to user-facing errors. The most
+    // common hit in practice is max_verifications_reached — the World ID
+    // action has a per-human verification cap that's orthogonal to
+    // vohu's per-proposal nullifier dedup, so an already-voted human
+    // looks to the cloud like a second verification attempt.
+    let error: string;
+    let status = 401;
+    switch (code) {
+      case 'max_verifications_reached':
+      case 'already_signed_up':
+        error =
+          "This World ID has already voted on this action. Each human can cast one ballot per World ID action; vohu's proposal-level dedup is separate. Raise the action's 'Max verifications per user' in the Developer Portal to allow re-verification across proposals.";
+        status = 409;
+        break;
+      case 'invalid_merkle_root':
+      case 'root_too_old':
+        error =
+          'World ID identity tree has rotated since you verified. Log out and verify again.';
+        break;
+      case 'invalid_proof':
+        error =
+          'World ID proof is cryptographically invalid — client likely tampered with the payload.';
+        break;
+      case 'invalid_credential_type':
+        error =
+          'The action is configured for a different verification level than what the client produced.';
+        break;
+      default:
+        error = `World ID verification rejected with code "${code}".`;
+    }
     return NextResponse.json(
       {
-        error: 'world id proof failed',
-        detail: proofResult.detail ?? proofResult.code,
+        error,
+        code,
+        detail: proofResult.detail ?? null,
       },
-      { status: 401 },
+      { status },
     );
   }
 

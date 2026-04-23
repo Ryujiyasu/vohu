@@ -166,7 +166,10 @@ export default function VotePage() {
         router.push(`/result/${proposal.id}`);
       } else {
         const body = await res.json().catch(() => ({}));
-        setError(body.error ?? `server returned ${res.status}`);
+        const lead = body.error ?? `server returned ${res.status}`;
+        const detail = body.detail && body.detail !== body.code ? ` (${body.detail})` : '';
+        const code = body.code ? ` [${body.code}]` : '';
+        setError(`${lead}${detail}${code}`);
         setStage(null);
         setSubmitting(false);
       }
