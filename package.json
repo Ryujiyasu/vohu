@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@upstash/redis": "^1.37.0",
     "@worldcoin/minikit-js": "1.11.0",
     "hyde-wasm": "file:./vendor/hyde-wasm",
     "next": "16.2.4",
