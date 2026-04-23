@@ -12,7 +12,7 @@
 'use client';
 
 import { MiniKit } from '@worldcoin/minikit-js';
-import type { Signer } from '@xmtp/browser-sdk';
+import { IdentifierKind, type Signer } from '@xmtp/browser-sdk';
 
 /** Convert a 0x-prefixed hex string to Uint8Array. */
 export function hexToBytes(hex: string): Uint8Array {
@@ -49,7 +49,7 @@ export function createMiniKitSigner(address: string): Signer {
     type: 'EOA',
     getIdentifier: () => ({
       identifier: address.toLowerCase(),
-      identifierKind: 'Ethereum' as unknown as never,
+      identifierKind: IdentifierKind.Ethereum,
     }),
     signMessage: async (message: string) => {
       const res = await MiniKit.commandsAsync.signMessage({ message });
