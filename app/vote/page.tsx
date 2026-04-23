@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
 import {
@@ -88,6 +89,11 @@ export default function VotePage() {
       });
       if (res.ok) {
         router.push(`/result/${proposal.id}`);
+      } else if (res.status === 409) {
+        // Already voted with this nullifier — that's fine, proceed to
+        // results so the user can see the aggregate without being stuck
+        // on the /vote screen.
+        router.push(`/result/${proposal.id}`);
       } else {
         const body = await res.json().catch(() => ({}));
         setError(body.error ?? `server returned ${res.status}`);
@@ -139,6 +145,13 @@ export default function VotePage() {
         {error && (
           <p className="mt-4 text-sm text-rose-400 text-center">{error}</p>
         )}
+
+        <Link
+          href={`/result/${p.id}`}
+          className="mt-4 block w-full py-3 text-center text-sm text-emerald-400 font-mono border border-emerald-900 rounded-full hover:bg-emerald-950/40 transition"
+        >
+          View current results →
+        </Link>
 
         <p className="mt-6 text-xs text-slate-500 text-center leading-relaxed">
           🔒 Your ballot is encrypted on this device under the election&apos;s
