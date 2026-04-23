@@ -3,22 +3,38 @@
 import { Suspense, useState } from 'react';
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import {
-  IDKitWidget,
-  VerificationLevel as IDKitLevel,
-  ISuccessResult,
+  IDKitRequestWidget,
+  orbLegacy,
+  type IDKitResult,
+  type RpContext,
 } from '@worldcoin/idkit';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 
+function extractNullifier(result: IDKitResult): string | null {
+  // v3/v4 result: responses[] has { nullifier } (hex string).
+  if ('responses' in result && Array.isArray(result.responses)) {
+    const first = result.responses[0];
+    if (first && 'nullifier' in first && typeof first.nullifier === 'string') {
+      return first.nullifier;
+    }
+  }
+  return null;
+}
+
 function LoginInner() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idkitOpen, setIdkitOpen] = useState(false);
+  const [rpContext, setRpContext] = useState<RpContext | null>(null);
+  const [preparingRp, setPreparingRp] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHuman = useInVerifiedHumanContext();
 
   const nextUrl = searchParams.get('next') ?? '/';
+  const action = process.env.NEXT_PUBLIC_ACTION_ID!;
 
   const finish = (nullifier: string) => {
     sessionStorage.setItem('nullifier', nullifier);
@@ -30,7 +46,7 @@ function LoginInner() {
     setVerifying(true);
     try {
       const result = await MiniKit.commandsAsync.verify({
-        action: process.env.NEXT_PUBLIC_ACTION_ID!,
+        action,
         verification_level: VerificationLevel.Orb,
       });
       const payload = result.finalPayload;
@@ -47,8 +63,42 @@ function LoginInner() {
     }
   };
 
-  const handleIDKitSuccess = (result: ISuccessResult) => {
-    finish(result.nullifier_hash);
+  const handleStartIDKit = async () => {
+    setError(null);
+    setPreparingRp(true);
+    try {
+      const res = await fetch('/api/rp-signature', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `rp-signature failed: ${res.status}`);
+      }
+      const { sig, nonce, created_at, expires_at } = await res.json();
+      setRpContext({
+        rp_id: process.env.NEXT_PUBLIC_RP_ID!,
+        nonce,
+        created_at,
+        expires_at,
+        signature: sig,
+      });
+      setIdkitOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'RP signature failed');
+    } finally {
+      setPreparingRp(false);
+    }
+  };
+
+  const handleIDKitSuccess = (result: IDKitResult) => {
+    const n = extractNullifier(result);
+    if (!n) {
+      setError('World ID returned no nullifier.');
+      return;
+    }
+    finish(n);
   };
 
   return (
@@ -86,22 +136,26 @@ function LoginInner() {
 
       {isHuman === false && (
         <>
-          <IDKitWidget
-            app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-            action={process.env.NEXT_PUBLIC_ACTION_ID!}
-            verification_level={IDKitLevel.Orb}
-            onSuccess={handleIDKitSuccess}
-            onError={err => setError(err.code ?? 'IDKit error')}
+          <button
+            onClick={handleStartIDKit}
+            disabled={preparingRp}
+            className="px-8 py-4 bg-white text-black rounded-full font-semibold disabled:opacity-50 active:scale-95 transition-transform"
           >
-            {({ open }) => (
-              <button
-                onClick={open}
-                className="px-8 py-4 bg-white text-black rounded-full font-semibold active:scale-95 transition-transform"
-              >
-                Verify with World ID (scan QR)
-              </button>
-            )}
-          </IDKitWidget>
+            {preparingRp ? 'Preparing…' : 'Verify with World ID (scan QR)'}
+          </button>
+          {rpContext && (
+            <IDKitRequestWidget
+              app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
+              action={action}
+              rp_context={rpContext}
+              allow_legacy_proofs={true}
+              preset={orbLegacy({})}
+              open={idkitOpen}
+              onOpenChange={setIdkitOpen}
+              onSuccess={handleIDKitSuccess}
+              onError={code => setError(`IDKit error: ${code}`)}
+            />
+          )}
           <p className="mt-6 text-xs text-slate-400 max-w-xs text-center leading-relaxed">
             Scan the QR with World App to verify. Identity unlocks Chrome-viewable
             surfaces (aggregate results). Vote casting still requires opening
