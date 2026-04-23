@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
   }
 
-  const proposal = getProposal(proposalId);
+  const proposal = await getProposal(proposalId);
   if (!proposal) {
     return NextResponse.json({ error: 'unknown proposal' }, { status: 404 });
   }

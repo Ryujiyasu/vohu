@@ -130,10 +130,6 @@ Three taps: verify, vote, reveal aggregate.
 > Paillier guards the ballot box.
 > t-of-N trustees hold the keys to the box.
 
-### Why Paillier, not a full FHE engine
-
-For a 3-option secret ballot, aggregation is pure addition. Paillier's additive homomorphism gives us the "compute on encrypted data" property at a fraction of the engineering and runtime cost of a fully homomorphic cipher. Swapping in true FHE (e.g. [`tfhe-rs`](https://github.com/zama-ai/tfhe-rs)) becomes meaningful only when the tally logic grows beyond addition — e.g. ranked-choice, approval voting, or weighted delegation. That's v2.
-
 ### Trust assumption (v1, explicitly)
 
 v1 ships with **threshold Paillier, t=2 of N=3 trustees** (`lib/threshold-paillier.ts`). At proposal creation time the key-generation routine splits λ via polynomial secret sharing and immediately discards the original λ, μ, and polynomial coefficients. The surviving state is:
@@ -145,17 +141,50 @@ v1's **demo simplification** is that all three shares are co-located in the same
 
 v2 distributes each share to a distinct trustee device; partial decryption happens client-side; the server never sees any share.
 
-### Why Paillier, not a full FHE engine
+## The three bindings — why vohu gates `/vote` to World App
 
-For a 3-option secret ballot, aggregation is pure addition. Paillier's additive homomorphism gives us the "compute on encrypted data" property at a fraction of the engineering and runtime cost of a fully homomorphic cipher. Swapping in true FHE (e.g. [`tfhe-rs`](https://github.com/zama-ai/tfhe-rs)) becomes meaningful only when the tally logic grows beyond addition — e.g. ranked-choice, approval voting, or weighted delegation. That's v2 via the [`plat`](https://gitlab.com/Ryujiyasu/plat) crate.
+A coherent voting action requires three cryptographic bindings to all hold at the same time. Login systems need only the first two. Voting systems need all three.
+
+| Binding | Claim it makes | How vohu enforces it |
+|---|---|---|
+| **Identity** | "this nullifier corresponds to a biologically-unique human" | World ID 4.0 Orb at enrollment time; single-use nullifier per (human × action) |
+| **Device** | "this authenticator is bound to a specific piece of hardware" | Secure Enclave / TPM-backed passkey inside World App |
+| **Runtime** | "the human who owns this device is operating it **right now**, in a private context" | `prome` — `/vote` and `/result` are gated to the World App WebView on the user's own phone |
+
+Login and attestation only need identity + device. Voting needs runtime binding too, because the *content of the choice* — not just the identity of the voter — is the value being protected. If a voter's choice can be observed or recorded in real time, the system cannot be receipt-free, regardless of how strong the underlying cryptography is.
+
+### Why Chrome fails the runtime binding
+
+A Chrome + World App QR flow (the standard "Sign in with World ID" pattern for web apps) is perfectly fine for login — the nullifier is computed on the phone and returned to Chrome privately. But for voting it opens a coercion channel:
+
+```
+attacker (looking at Chrome screen)  →  "Vote 'Yes' and let me see your screen."
+voter (scans QR on phone)             →  World App returns nullifier to Chrome ✓ (identity bound)
+voter (clicks 'Yes' on Chrome)        →  attacker sees the click ✗ (runtime binding broken)
+```
+
+The attacker now holds a verifiable receipt — they watched the click or the screenshot. Vote-selling, coerced voting by an abusive partner, forced voting by a manager, gang-enforced voting: all of these exploit the runtime gap.
+
+`prome` closes that gap by construction: `/vote` and `/result` only render their content inside the World App WebView on the voter's own phone. The voter must physically hold their phone, their biometric must unlock World App, and the ballot selection happens on a private screen they are in sole control of. `prome` is a cheap, construction-level coercion mitigation — it does not reach MACI's cryptographic key-rotation strength, but it is orthogonal to MACI and can be combined with it (and in v3, will be).
+
+### Position in the literature
+
+- [Benaloh 1987] establishes that a secret-ballot system must prevent a voter from being able to *prove* how they voted. The three bindings above are one modern decomposition of that requirement.
+- [Juels-Catalano-Jakobsson 2005] formalises "receipt-freeness" and "coercion-resistance". vohu v1 addresses weaker forms: runtime-channel coercion (shoulder surfing, screen recording, forced operation) but not cryptographic-receipt coercion.
+- [Helios 2008] explicitly treats coercion resistance as out of scope. vohu goes one step beyond Helios here, for free, via the Mini App constraint.
+- [MACI 2019] is the strongest current answer: a coerced voter can silently override their own prior ballot via key rotation. v3's roadmap integrates MACI-style key rotation into the Mini App flow.
 
 ## prome — "ciphertext outside, ballot inside"
 
 When vohu is opened in **Chrome, Safari, or any browser that isn't World App**, `/vote` and `/result/*` deliberately render as a wall of civic-stamp-green ciphertext with a prompt to open the app in World App.
 
-This demonstrates the thesis — *the ballot is invisible to anything that isn't a verified human* — without requiring the reader to install anything. It's also the cleanest possible judge-facing demo: same URL, two devices, two completely different experiences.
+This isn't just a narrative flourish — it is the runtime binding mechanism from the previous section, implemented in under 100 lines. It is also the clearest possible demo a judge can see: same URL, two devices, two completely different experiences.
 
 See [`lib/prome.ts`](./lib/prome.ts) and [`components/ObfuscatedScreen.tsx`](./components/ObfuscatedScreen.tsx).
+
+### Why Paillier, not a full FHE engine
+
+For a 3-option secret ballot, aggregation is pure addition. Paillier's additive homomorphism gives us the "compute on encrypted data" property at a fraction of the engineering and runtime cost of a fully homomorphic cipher. Swapping in true FHE (e.g. [`tfhe-rs`](https://github.com/zama-ai/tfhe-rs)) becomes meaningful only when the tally logic grows beyond addition — e.g. ranked-choice, approval voting, or weighted delegation. That's v2 via the [`plat`](https://gitlab.com/Ryujiyasu/plat) crate.
 
 ## Stack
 

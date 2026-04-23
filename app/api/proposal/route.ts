@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if (!proposalId) {
     return NextResponse.json({ error: 'no proposalId' }, { status: 400 });
   }
-  const proposal = getProposal(proposalId);
+  const proposal = await getProposal(proposalId);
   if (!proposal) {
     return NextResponse.json({ error: 'unknown proposal' }, { status: 404 });
   }
