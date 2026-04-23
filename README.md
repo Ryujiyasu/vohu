@@ -188,6 +188,24 @@ See [`lib/prome.ts`](./lib/prome.ts) and [`components/ObfuscatedScreen.tsx`](./c
 
 For a 3-option secret ballot, aggregation is pure addition. Paillier's additive homomorphism gives us the "compute on encrypted data" property at a fraction of the engineering and runtime cost of a fully homomorphic cipher. Swapping in true FHE (e.g. [`tfhe-rs`](https://github.com/zama-ai/tfhe-rs)) becomes meaningful only when the tally logic grows beyond addition — e.g. ranked-choice, approval voting, or weighted delegation. That's v2 via the [`plat`](https://gitlab.com/Ryujiyasu/plat) crate.
 
+## Device-bound receipts
+
+After `/api/vote` accepts a ballot, the client asks MiniKit to `signMessage()` a canonical receipt payload:
+
+```
+vohu-receipt/v1
+proposal=<proposalId>
+nullifier=<hex>
+ballot-digest=<sha256-hex of ciphertextVec>
+issued-at=<ISO8601>
+```
+
+The signing key lives in the World App's secure element (Secure Enclave on iOS, StrongBox on Android) and is not exportable. The receipt — message, signature, and the signer address — is stored in `localStorage` on the device that cast the ballot. `/receipt/[proposalId]` lets the voter re-sign a **fresh** challenge, then [viem.verifyMessage](https://viem.sh/) confirms the signature recovers to the same address embedded in the stored receipt.
+
+This is non-transferable in the sense that matters for coercion: a bystander who copies the receipt bytes cannot produce a new signature for a challenge they don't get to pre-commit, because the private key never leaves the voter's device. The receipt proves "I voted", privately to the voter — it does not prove "I voted this way" to anyone else.
+
+v2 moves the underlying signing key into [`hyde`](https://gitlab.com/Ryujiyasu/hyde)-backed TPM storage on self-host / desktop deployments, upgrading the non-export guarantee from OS-level to hardware-attested. The protocol above is unchanged.
+
 ## Stack
 
 | Layer | What | Where |

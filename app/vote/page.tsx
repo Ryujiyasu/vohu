@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { MiniKit } from '@worldcoin/minikit-js';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
 import {
@@ -11,6 +12,12 @@ import {
   SerializedPublicKey,
 } from '@/lib/tally';
 import { DEMO_PROPOSAL, Proposal } from '@/lib/proposal';
+import {
+  RECEIPT_VERSION,
+  ballotDigest,
+  buildReceiptMessage,
+  saveReceipt,
+} from '@/lib/receipt';
 
 const PROPOSAL_PLAINTEXT =
   DEMO_PROPOSAL.title + '\n' + DEMO_PROPOSAL.options.map(o => o.label).join('\n');
@@ -88,6 +95,35 @@ export default function VotePage() {
         }),
       });
       if (res.ok) {
+        setStage('Signing device-bound receipt…');
+        try {
+          const digest = await ballotDigest(ciphertextVec);
+          const issuedAt = new Date().toISOString();
+          const message = buildReceiptMessage({
+            proposalId: proposal.id,
+            nullifier,
+            ballotDigest: digest,
+            issuedAt,
+          });
+          const signed = await MiniKit.commandsAsync.signMessage({ message });
+          const payload = signed.finalPayload;
+          if (payload.status === 'success') {
+            saveReceipt({
+              version: RECEIPT_VERSION,
+              proposalId: proposal.id,
+              nullifier,
+              ballotDigest: digest,
+              issuedAt,
+              message,
+              signature: payload.signature,
+              address: payload.address,
+            });
+          }
+        } catch (e) {
+          // Receipt signing is best-effort. If the user rejects or we're
+          // outside a signMessage-capable runtime, the vote still stands.
+          console.warn('receipt signing failed', e);
+        }
         router.push(`/result/${proposal.id}`);
       } else if (res.status === 409) {
         // Already voted with this nullifier — that's fine, proceed to

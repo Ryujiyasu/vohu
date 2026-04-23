@@ -203,12 +203,20 @@ export default function ResultPage() {
           </div>
         )}
 
-        <button
-          onClick={() => setShowServerView(v => !v)}
-          className="w-full text-xs text-emerald-400 font-mono py-2 border border-emerald-900 rounded hover:bg-emerald-950/40 transition"
-        >
-          {showServerView ? 'Hide' : 'Show'} what the server sees
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href={`/receipt/${proposalId}`}
+            className="flex-1 text-center text-xs text-emerald-400 font-mono py-2 border border-emerald-900 rounded hover:bg-emerald-950/40 transition"
+          >
+            My receipt →
+          </Link>
+          <button
+            onClick={() => setShowServerView(v => !v)}
+            className="flex-1 text-xs text-emerald-400 font-mono py-2 border border-emerald-900 rounded hover:bg-emerald-950/40 transition"
+          >
+            {showServerView ? 'Hide' : 'Show'} server view
+          </button>
+        </div>
 
         {showServerView && (
           <div className="mt-4 bg-black/60 border border-emerald-900/50 rounded-xl p-4 space-y-1 max-h-64 overflow-auto">

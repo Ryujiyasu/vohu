@@ -151,6 +151,24 @@ vohu を **Chrome / Safari / World App 以外** で開くと、`/vote` と `/res
 
 3 択投票の集計は純粋な加算だけ。Paillier の加法準同型で「暗号文上で計算」の性質が手に入り、完全準同型暗号（FHE）よりエンジニアリングと実行コストが桁違いに低い。本物の FHE（[`tfhe-rs`](https://github.com/zama-ai/tfhe-rs)）が意味を持つのは、集計ロジックが加算を超えるとき（ranked-choice、approval、重み付き委任など）。それが v2、[`plat`](https://gitlab.com/Ryujiyasu/plat) crate で対応する。
 
+## 端末束縛レシート
+
+`/api/vote` が投票を受理すると、クライアントは MiniKit の `signMessage()` で標準レシート payload に署名する:
+
+```
+vohu-receipt/v1
+proposal=<proposalId>
+nullifier=<hex>
+ballot-digest=<ciphertextVec の sha256 hex>
+issued-at=<ISO8601>
+```
+
+署名鍵は World App の secure element（iOS Secure Enclave、Android StrongBox）にあり、エクスポート不可。レシート（message + signature + signer address）は **投票した端末** の localStorage に保存される。`/receipt/[proposalId]` で投票者は **新しい** チャレンジに再署名でき、[viem.verifyMessage](https://viem.sh/) が署名がレシートに埋め込まれた同じアドレスに復元されることを確認する。
+
+これは coercion 的に意味のある **非転送性** を持つ: レシートのバイト列を他人がコピーしても、事前にコミットできないチャレンジに新しい署名を作れない — 秘密鍵が投票者の端末から出ないから。「投票した」を投票者自身に対してプライベートに証明できるが、「こう投票した」を他人に証明することはできない。
+
+v2 でセルフホスト / デスクトップ環境では、署名鍵を [`hyde`](https://gitlab.com/Ryujiyasu/hyde) バックアップの TPM ストレージに移す（非エクスポート保証が OS レベル → ハードウェア attestation レベルに昇格）。プロトコルは変わらない。
+
 ## スタック
 
 | レイヤ | 何 | 場所 |
