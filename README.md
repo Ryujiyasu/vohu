@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+![vohu — encrypted votes for verified humans](./public/og-image.png)
 
-First, run the development server:
+# vohu
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**Encrypted votes for verified humans.**
+
+A privacy-preserving voting Mini App for World. World ID guarantees one person, one vote. hyde encrypts the ballot end-to-end. Nobody — not even the organizer — can see who voted for what.
+
+</div>
+
+---
+
+## Why vohu
+
+Existing voting tools give you one or the other:
+
+- **Sybil resistance** — but the server sees every vote (e.g. World App's Polls).
+- **Ballot secrecy** — but anyone can spin up a thousand accounts.
+
+vohu gives you both in one tap:
+
+```
+World ID 4.0  (passkeys)   →  "this is a verified human, and it's you"
+  hyde        (ML-KEM-768) →  "and the ballot is sealed on this device"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> Passkeys guard the front door. hyde guards the ballot box.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Layer | What | Where |
+|---|---|---|
+| Identity | World ID 4.0 (Orb verification, single-use nullifiers) | [`@worldcoin/minikit-js`](https://www.npmjs.com/package/@worldcoin/minikit-js) |
+| Ballot encryption | ML-KEM-768 (post-quantum) via hyde's software backend | [`hyde`](https://gitlab.com/Ryujiyasu/hyde) compiled to WASM |
+| Presence / UV | janus person-binding layer | [`janus`](https://gitlab.com/Ryujiyasu/janus) |
+| UI | Next.js 16 (App Router) + Tailwind | this repo |
 
-## Learn More
+## Running locally
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm install
+pnpm dev
+# open http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Required environment variables (`.env.local`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+NEXT_PUBLIC_APP_ID=app_xxxxxxxxxxxxx
+NEXT_PUBLIC_ACTION_ID=rp_xxxxxxxxxxxxx
+WORLDCOIN_SIGNER_ADDRESS=0x...
+WORLDCOIN_SIGNER_PRIVATE_KEY=0x...
+```
 
-## Deploy on Vercel
+To test as a Mini App inside World App, expose the dev server via a stable
+HTTPS URL (ngrok static domain, Cloudflare Tunnel, or a Vercel preview
+deployment) and set that URL as the **App URL** in the World Developer Portal.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Routes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/` — World ID sign-in entry point.
+- `/vote` — cast an encrypted ballot.
+- `/result/[proposalId]` — aggregate result page (with ciphertext preview).
+- `/hyde-probe` — sanity check that hyde-wasm loads and roundtrips in the browser.
+- `/api/vote` — ciphertext ingest endpoint (nullifier-deduplicated).
+
+## prome gating
+
+When vohu is opened in **any browser other than World App**, the ballot and
+result pages render as an obfuscated, civic-stamp-green wall of ciphertext
+with a prompt to open the app in World App. This demonstrates the app's core
+premise — *the ballot is invisible to anything that isn't a verified human* —
+without requiring the reader to install anything.
+
+## License
+
+MIT.
