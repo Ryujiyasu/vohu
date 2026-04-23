@@ -2,6 +2,22 @@
   "name": "vohu",
   "version": "0.1.0",
   "private": true,
+  "description": "Encrypted votes for verified humans — a Paillier + threshold-decryption voting Mini App for World ID.",
+  "keywords": [
+    "world-build-3",
+    "worldcoin",
+    "world-id",
+    "miniapp",
+    "paillier",
+    "homomorphic-encryption",
+    "privacy-voting",
+    "zero-knowledge"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ryujiyasu/vohu.git"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
