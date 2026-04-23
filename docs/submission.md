@@ -8,9 +8,9 @@ Repo: <https://github.com/Ryujiyasu/vohu> · Live: <https://vohu.vercel.app> · 
 
 ## The one-line version
 
-> **Encrypted votes for verified humans — one-tap secret-ballot Mini App on World, with a cryptographic triple-binding that no prior voting system has combined.**
+> **Encrypted votes for verified humans — the hello-world of threshold homomorphic aggregation on World ID. Voting first; matching, compatibility, and coordination on the same primitive next.**
 
-Use this as the tagline on the submission form, on Twitter, anywhere you have ~140 characters.
+Use this as the tagline on the submission form, on Twitter, anywhere you have ~140 characters. The shorter fallback: **"Encrypted votes for verified humans."**
 
 ---
 
@@ -39,8 +39,11 @@ Time markers are approximate — aim to finish by 3:00 even if you compress.
 **2:15 — The runtime layer.**
 > Open the same URL in Chrome and you get a wall of green ciphertext with "open in World App to decrypt." That's not security theater — it's the runtime binding. Voting is an action whose content matters, not just its identity, and a ballot that's observable in real time can't be receipt-free. We close that surface by construction.
 
+**2:30 — What vohu actually is.**
+> I'm not pitching a voting app. I'm pitching a thesis: threshold homomorphic aggregation on verified humans is a new category, and that category will have multiple billion-dollar applications on top. Voting is the cleanest surface to prove the primitive — the tally is pure addition, the answer is the aggregate, the threat model fits a slide. Matching, medical compatibility, salary transparency, peer review — same primitive, different surface. vohu is the hello world.
+
 **2:45 — Close.**
-> vohu ran during the hackathon. Four Orb-verified humans I did not invite found it through the World App directory, cleared the full double-auth, cast encrypted ballots, and two trustees independently triggered the tally ceremony. The server logged a count. It never saw a vote. That is the system working the way a ballot box is supposed to.
+> vohu ran during the hackathon. Four Orb-verified humans I did not invite found it through the World App directory, cleared the full double-auth, cast encrypted ballots, and two trustees independently triggered the tally ceremony. The server logged a count. It never saw a vote. That is the primitive working the way a primitive is supposed to.
 
 ---
 
@@ -116,6 +119,8 @@ Real-world use during the hackathon. Four Orb-verified humans I did not invite f
 Stack: Next.js 16 App Router, Turbopack, Tailwind v4. @worldcoin/minikit-js 1.11 (Mini App path) + @worldcoin/idkit v4 (Chrome IDKit path). paillier-bigint 3.4 for the 2048-bit cryptosystem; threshold math hand-written in lib/threshold-paillier.ts. @xmtp/browser-sdk 7 for chat scoping. viem 2 for Ethereum signature verification. Upstash Redis via Vercel Marketplace. Published on crates.io as part of the hyde ecosystem.
 
 Roadmap. v2 (Seoul Build Week, May 2026): distributed trustee shares on separate devices, NIZK per partial, MACI-style receipt-free bribery resistance, lattice-based HE for ranked-choice and quadratic voting via the plat crate. Academic writeup of the v1→v3 trajectory is planned.
+
+vohu is not the platform. The primitive is. vohu is the hello world that proves the primitive works in production; once the primitive matures — threshold → distributed keygen → FHE → service-level API — the same math powers matching, threshold coordination, and sensitive-attribute compatibility as separate applications on top. Voting is surface one.
 ```
 
 ### Tech stack tags

@@ -20,6 +20,37 @@ decrypted.
 
 ---
 
+## vohu is the hello world of a primitive
+
+**The primitive being researched:** *threshold homomorphic aggregation and matching on verified humans.* A group of Orb-verified humans jointly produces an aggregate output — a sum, a match, an intersection — while no individual input is ever decrypted and no single party ever holds the decryption key.
+
+**The application shipped in this repo:** a private voting Mini App. Voting is the cleanest surface to prove the primitive works in production: the tally is pure addition, the aggregate is the answer, the threat model is legible in a 3-minute pitch. Once the primitive matures beyond this demo, the same underlying math powers matching, threshold signaling, and sensitive-attribute compatibility on top of the same verified-human layer.
+
+So the layering is:
+
+```
+[ verified-human threshold homomorphic aggregation ]  ← the primitive (research track)
+                    ▲   uses:  plat (FHE), hyde (PQC), argo (ZKP), World ID (PoP)
+                    │
+[ vohu: the first application ]                       ← this repo (ships today)
+                    │
+[ future apps: matching, coordination, compatibility ]  ← separate surfaces, same primitive
+```
+
+### Primitive maturity roadmap
+
+| Stage | What | Status | What vohu gets |
+|---|---|---|---|
+| v1 | Single-trustee Paillier → 2-of-3 threshold Paillier | **shipped** (this repo) | Production-ready for polls where the "single operator + published trust model" is acceptable |
+| v2 | Distributed trustee devices, verifiable partial decryption (NIZK) | research (Seoul Build Week) | No single host holds the shares, byzantine trustee rejected cryptographically |
+| v3 | Distributed key generation (no trusted dealer) + receipt-free bribery resistance (MACI-style key rotation) | research | Cryptographic end-game — λ never exists as a single object anywhere |
+| v4 | Lattice-based FHE via [`plat`](https://gitlab.com/Ryujiyasu/plat) (BFV / BGV / TFHE) | research | Post-quantum, and the aggregation function stops being pure addition — ranked-choice, quadratic, weighted-delegation, matching, compatibility |
+| v5 | Primitive as a service — other Mini Apps run on vohu's threshold layer | research | Vohu stops being "an app" and starts being the substrate; the layering collapses into a category |
+
+v1 is what you can actually cast a ballot on today. Everything below v1 is a research roadmap, not a product promise — called out separately so the hackathon demo isn't conflated with the long-term thesis.
+
+---
+
 ## The problem
 
 Existing voting tools are stuck at a fork in the road:
