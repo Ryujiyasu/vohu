@@ -71,6 +71,13 @@ export default function Home() {
           Open vohu in World App to decrypt.
         </p>
       )}
+
+      <a
+        href="/demos"
+        className="mt-12 text-[11px] text-slate-500 underline hover:text-slate-300 tracking-wide"
+      >
+        three bindings, three doors →
+      </a>
     </main>
   );
 }
