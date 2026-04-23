@@ -14,6 +14,8 @@ decrypted.
 
 [Built for World Build 3, April 2026](https://worldbuildlabs.com) · [Live](https://vohu.vercel.app) · [Open in World App](https://world.org/mini-app?app_id=app_7ef7c4ad41af2d289fd9312a18bb8d68)
 
+[日本語 README →](./README.ja.md)
+
 </div>
 
 ---

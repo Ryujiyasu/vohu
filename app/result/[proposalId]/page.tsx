@@ -101,9 +101,38 @@ export default function ResultPage() {
           ← vohu
         </Link>
         <h1 className="text-2xl font-bold mt-6 mb-2 leading-snug">{p.title}</h1>
-        <p className="text-slate-400 mb-6">
+        <p className="text-slate-400 mb-3">
           {data.total} verified human{data.total === 1 ? '' : 's'} voted
+          {data.revealed ? '.' : ' · tally encrypted.'}
         </p>
+
+        {p.scope?.kind === 'xmtp-group' && (
+          <div className="mb-6 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400 space-y-1">
+            <div>
+              <span className="text-slate-500">scope · </span>
+              <span className="text-slate-200">
+                {p.scope.groupName ?? 'XMTP group'}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">members at snapshot · </span>
+              <span className="font-mono text-slate-300">
+                {p.scope.allowedAddresses.length}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500">snapshot · </span>
+              <span className="font-mono text-slate-300">
+                {new Date(p.scope.snapshotAt).toISOString().slice(0, 16)}Z
+              </span>
+            </div>
+          </div>
+        )}
+        {!p.scope && (
+          <p className="mb-6 text-xs text-slate-500">
+            Open to all Orb-verified humans.
+          </p>
+        )}
 
         {!data.revealed ? (
           <section className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4 mb-6 space-y-3">
@@ -203,11 +232,27 @@ export default function ResultPage() {
           </div>
         )}
 
-        <p className="mt-6 text-xs text-slate-500 text-center leading-relaxed">
-          Threshold Paillier · t={data.threshold} of N={data.totalParties}.
-          <br />
-          Only the aggregate is ever decrypted.
-        </p>
+        <div className="mt-8 pt-6 border-t border-slate-800/60 text-xs text-slate-500 leading-relaxed space-y-2">
+          <p>
+            <span className="text-slate-300 font-mono">Threshold Paillier</span>{' '}
+            · t={data.threshold} of N={data.totalParties}. No single party —
+            including the server — can decrypt a ballot. Only the aggregate is
+            ever revealed, and only after {data.threshold} trustees cooperate.
+          </p>
+          <p>
+            <span className="text-slate-300 font-mono">Sybil resistance</span> ·
+            World ID Orb nullifier, single-use per proposal. One human, one
+            vote, enforced at the cryptographic layer.
+          </p>
+          {p.scope && (
+            <p>
+              <span className="text-slate-300 font-mono">Scope</span> ·
+              Membership snapshot taken at proposal creation. A signed
+              attribution proves the voter held an allowed address at snapshot
+              time, without revealing which address.
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );
