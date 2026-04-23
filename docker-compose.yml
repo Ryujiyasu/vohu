@@ -1,0 +1,65 @@
+# Self-host vohu with a local Redis.
+#
+# vohu's store.ts talks to Upstash's REST API, so we stand up an HTTP
+# bridge (hiett/serverless-redis-http) in front of a plain redis:7
+# container. The web service then sees a KV_REST_API_URL that looks
+# just like a managed Upstash endpoint — no code change needed.
+#
+# Usage:
+#   cp .env.example .env      # fill in Developer Portal values
+#   docker compose up --build -d
+#   docker compose logs -f web
+#   curl -sf http://localhost:3000/api/proposal?proposalId=demo-2026-04 | jq .
+#
+# In production you SHOULD replace the local redis + bridge with a real
+# managed KV (Upstash, Vercel KV) — see docs/deploy.md for why, plus
+# the larger conversation about share distribution for the threshold
+# trustees.
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --save 60 1
+      --dir /data
+    volumes:
+      - redis-data:/data
+
+  redis-http:
+    image: hiett/serverless-redis-http:latest
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${REDIS_HTTP_TOKEN:-local-vohu-token}
+      SRH_CONNECTION_STRING: redis://redis:6379
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_ID: ${NEXT_PUBLIC_APP_ID}
+        NEXT_PUBLIC_ACTION_ID: ${NEXT_PUBLIC_ACTION_ID}
+        NEXT_PUBLIC_RP_ID: ${NEXT_PUBLIC_RP_ID}
+    restart: unless-stopped
+    depends_on:
+      - redis-http
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      # Upstash-shaped REST endpoint served by the redis-http bridge.
+      KV_REST_API_URL: http://redis-http:80
+      KV_REST_API_TOKEN: ${REDIS_HTTP_TOKEN:-local-vohu-token}
+      # IDKit v4 / MiniKit attribution signing key.
+      WORLDCOIN_SIGNER_ADDRESS: ${WORLDCOIN_SIGNER_ADDRESS}
+      WORLDCOIN_SIGNER_PRIVATE_KEY: ${WORLDCOIN_SIGNER_PRIVATE_KEY}
+    ports:
+      - "3000:3000"
+
+volumes:
+  redis-data:

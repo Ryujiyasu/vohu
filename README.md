@@ -232,6 +232,10 @@ v2 moves the underlying signing key into [`hyde`](https://gitlab.com/Ryujiyasu/h
 | `GET /api/tally?proposalId=…` | Homomorphic aggregate + combine of submitted partials. Returns `revealed: false` until threshold trustees approve. |
 | `POST /api/trustee/approve` | One trustee submits their partial decryption of the current aggregate. |
 
+## Self-hosting
+
+A Docker Compose stack lives in the repo root: `docker compose up --build -d` brings up the Next.js app, a plain Redis, and an Upstash-compatible HTTP bridge in front of it. See [docs/deploy.md](./docs/deploy.md) for prerequisites, TLS, and the trust-model trade-offs versus the Vercel reference deployment.
+
 ## Running locally
 
 ```bash

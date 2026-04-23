@@ -198,6 +198,10 @@ v2 でセルフホスト / デスクトップ環境では、署名鍵を [`hyde`
 | `POST /api/propose` | 新規提案作成（scope オプション可） |
 | `POST /api/rp-signature` | IDKit v4 用の RP 署名を生成（サーバー側のみ） |
 
+## セルフホスト
+
+リポジトリ直下に Docker Compose スタックあり。`docker compose up --build -d` で Next.js アプリ + 素の Redis + Upstash 互換 HTTP ブリッジが立ち上がる。前提条件・TLS・Vercel リファレンスデプロイとの trust-model の違いは [docs/deploy.md](./docs/deploy.md) 参照。
+
 ## ローカル実行
 
 ```bash
