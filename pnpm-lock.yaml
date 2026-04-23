@@ -12,8 +12,8 @@ importers:
         specifier: 1.11.0
         version: 1.11.0(@types/react@19.2.14)(react@19.2.4)(typescript@5.9.3)(viem@2.48.2(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       hyde-wasm:
-        specifier: file:../hyde/crates/hyde-wasm/pkg
-        version: file:../hyde/crates/hyde-wasm/pkg
+        specifier: file:./vendor/hyde-wasm
+        version: file:vendor/hyde-wasm
       next:
         specifier: 16.2.4
         version: 16.2.4(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1306,8 +1306,8 @@ packages:
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
 
-  hyde-wasm@file:../hyde/crates/hyde-wasm/pkg:
-    resolution: {directory: ../hyde/crates/hyde-wasm/pkg, type: directory}
+  hyde-wasm@file:vendor/hyde-wasm:
+    resolution: {directory: vendor/hyde-wasm, type: directory}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -3456,7 +3456,7 @@ snapshots:
     dependencies:
       hermes-estree: 0.25.1
 
-  hyde-wasm@file:../hyde/crates/hyde-wasm/pkg: {}
+  hyde-wasm@file:vendor/hyde-wasm: {}
 
   ieee754@1.2.1: {}
 
