@@ -12,6 +12,7 @@
     "@upstash/redis": "^1.37.0",
     "@worldcoin/minikit-js": "1.11.0",
     "bigint-conversion": "^2.4.3",
+    "bigint-crypto-utils": "^3.3.0",
     "hyde-wasm": "file:./vendor/hyde-wasm",
     "next": "16.2.4",
     "paillier-bigint": "^3.4.3",
@@ -26,6 +27,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
