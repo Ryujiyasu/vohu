@@ -1,0 +1,28 @@
+{
+  "name": "hyde-wasm",
+  "type": "module",
+  "description": "WASM bindings for Hyde (PQC layer + software backend)",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/Ryujiyasu/hyde"
+  },
+  "files": [
+    "hyde_wasm_bg.wasm",
+    "hyde_wasm.js",
+    "hyde_wasm.d.ts"
+  ],
+  "main": "hyde_wasm.js",
+  "types": "hyde_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "tee",
+    "tpm",
+    "encryption",
+    "security",
+    "hardware"
+  ]
+}
