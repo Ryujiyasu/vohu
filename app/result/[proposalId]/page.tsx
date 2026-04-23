@@ -97,8 +97,6 @@ export default function ResultPage() {
                         href={`/trustee?p=${encodeURIComponent(
                           proposalId,
                         )}&i=${i}`}
-                        target="_blank"
-                        rel="noreferrer"
                         className="text-emerald-400 hover:underline font-mono text-xs"
                       >
                         approve →

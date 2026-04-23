@@ -11,7 +11,8 @@
 // distribution path differs.
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 interface ProposalPayload {
   proposal: {
@@ -25,6 +26,20 @@ interface ProposalPayload {
   };
 }
 
+function BackBar({ href }: { href: string }) {
+  return (
+    <div className="max-w-md mx-auto">
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white py-2"
+      >
+        <span aria-hidden>←</span>
+        <span>Back to results</span>
+      </Link>
+    </div>
+  );
+}
+
 interface TallyState {
   total: number;
   revealed: boolean;
@@ -35,6 +50,7 @@ interface TallyState {
 
 function TrusteeInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const proposalId = searchParams.get('p');
   const trusteeIndex = Number(searchParams.get('i'));
 
@@ -43,6 +59,10 @@ function TrusteeInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const resultHref = proposalId
+    ? `/result/${encodeURIComponent(proposalId)}`
+    : '/';
 
   useEffect(() => {
     if (!proposalId || !trusteeIndex) return;
@@ -75,6 +95,9 @@ function TrusteeInner() {
           `/api/tally?proposalId=${encodeURIComponent(proposalId!)}`,
         ).then(r => r.json());
         setTally(t);
+        // Auto-return to results after a short beat so the trustee sees
+        // confirmation, then lands back on /result.
+        setTimeout(() => router.push(resultHref), 1800);
       }
     } catch (e) {
       setError(String(e));
@@ -98,6 +121,7 @@ function TrusteeInner() {
   if (!proposal) {
     return (
       <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
+        <BackBar href={resultHref} />
         <p className="pt-12 text-center text-slate-400">Loading…</p>
       </main>
     );
@@ -112,6 +136,7 @@ function TrusteeInner() {
 
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
+      <BackBar href={resultHref} />
       <div className="max-w-md mx-auto pt-12">
         <div className="mb-2 text-xs text-emerald-400 font-mono">
           TRUSTEE {trusteeIndex} OF {params.totalParties}
@@ -161,9 +186,17 @@ function TrusteeInner() {
         )}
 
         {(alreadyApproved || submitted) && (
-          <div className="w-full py-4 bg-emerald-950/60 border border-emerald-800 text-emerald-200 rounded-full font-semibold text-center">
-            ✓ Partial decryption submitted
-          </div>
+          <>
+            <div className="w-full py-4 bg-emerald-950/60 border border-emerald-800 text-emerald-200 rounded-full font-semibold text-center">
+              ✓ Partial decryption submitted
+            </div>
+            <Link
+              href={resultHref}
+              className="mt-3 block w-full py-3 text-center text-sm text-emerald-400 font-mono border border-emerald-900 rounded-full hover:bg-emerald-950/40 transition"
+            >
+              Back to results →
+            </Link>
+          </>
         )}
 
         {error && (
