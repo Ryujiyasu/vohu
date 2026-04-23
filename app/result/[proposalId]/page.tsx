@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { obfuscate } from '@/lib/prome';
-import { DEMO_PROPOSAL, Proposal } from '@/lib/proposal';
+import { DEMO_PROPOSAL, Proposal, ProposalPhase } from '@/lib/proposal';
 
 interface TallyResponse {
   proposal: Proposal;
@@ -15,6 +15,21 @@ interface TallyResponse {
   threshold: number;
   totalParties: number;
   ciphertextPreview: string[][];
+  phase: ProposalPhase;
+  votesCloseAt: number | null;
+}
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return 'closed';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
 }
 
 export default function ResultPage() {
@@ -133,6 +148,12 @@ export default function ResultPage() {
             Open to all Orb-verified humans.
           </p>
         )}
+
+        <PhaseBanner
+          phase={data.phase}
+          votesCloseAt={data.votesCloseAt}
+          revealed={data.revealed}
+        />
 
         {!data.revealed ? (
           <section className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4 mb-6 space-y-3">
@@ -264,4 +285,68 @@ export default function ResultPage() {
       </div>
     </main>
   );
+}
+
+function PhaseBanner({
+  phase,
+  votesCloseAt,
+  revealed,
+}: {
+  phase: ProposalPhase;
+  votesCloseAt: number | null;
+  revealed: boolean;
+}) {
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    if (phase !== 'voting' || votesCloseAt === null) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [phase, votesCloseAt]);
+
+  if (phase === 'open' && !revealed) return null;
+
+  if (phase === 'voting' && votesCloseAt !== null) {
+    const remaining = votesCloseAt - now;
+    return (
+      <div className="mb-4 rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200 space-y-1">
+        <div className="font-mono">
+          <span className="text-amber-400">●</span> voting open · change your
+          ballot any time before close
+        </div>
+        <div className="text-amber-300/70 font-mono">
+          closes in {formatCountdown(remaining)} ·{' '}
+          {new Date(votesCloseAt).toISOString().slice(0, 16)}Z
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'tallying' && !revealed) {
+    return (
+      <div className="mb-4 rounded-lg border border-sky-900/50 bg-sky-950/20 px-3 py-2 text-xs text-sky-200 space-y-1 font-mono">
+        <div>
+          <span className="text-sky-400">●</span> voting closed · tallying phase
+        </div>
+        <div className="text-sky-300/70">
+          aggregate frozen at{' '}
+          {votesCloseAt !== null
+            ? new Date(votesCloseAt).toISOString().slice(0, 16) + 'Z'
+            : '—'}{' '}
+          · trustees approve to reveal
+        </div>
+      </div>
+    );
+  }
+
+  if (revealed) {
+    return (
+      <div className="mb-4 rounded-lg border border-emerald-900/50 bg-emerald-950/20 px-3 py-2 text-xs text-emerald-200 font-mono">
+        <span className="text-emerald-400">●</span> revealed · tally decrypted
+        by trustee threshold
+      </div>
+    );
+  }
+
+  return null;
 }

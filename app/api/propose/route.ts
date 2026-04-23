@@ -49,10 +49,11 @@ export async function POST(req: NextRequest) {
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 });
   }
-  const { title, options, scope } = body as {
+  const { title, options, scope, votesCloseAt } = body as {
     title?: unknown;
     options?: unknown;
     scope?: unknown;
+    votesCloseAt?: unknown;
   };
 
   if (typeof title !== 'string' || !title.trim() || title.length > MAX_TITLE_LEN) {
@@ -135,6 +136,23 @@ export async function POST(req: NextRequest) {
     };
   }
 
+  let cleanVotesCloseAt: number | undefined = undefined;
+  if (votesCloseAt !== undefined && votesCloseAt !== null) {
+    if (typeof votesCloseAt !== 'number' || !Number.isFinite(votesCloseAt)) {
+      return NextResponse.json(
+        { error: 'votesCloseAt must be a unix-millis number' },
+        { status: 400 },
+      );
+    }
+    if (votesCloseAt <= Date.now()) {
+      return NextResponse.json(
+        { error: 'votesCloseAt must be in the future' },
+        { status: 400 },
+      );
+    }
+    cleanVotesCloseAt = votesCloseAt;
+  }
+
   const id = newProposalId();
   const proposal: Proposal = {
     id,
@@ -142,6 +160,7 @@ export async function POST(req: NextRequest) {
     options: cleanOptions,
     scope: cleanScope,
     createdAt: Date.now(),
+    votesCloseAt: cleanVotesCloseAt,
   };
   await saveProposal(proposal);
 

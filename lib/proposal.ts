@@ -47,7 +47,38 @@ export interface Proposal {
    *  `scope.allowedAddresses` may submit a ballot. */
   scope?: ProposalScope;
   createdAt: number;
+  /** Unix millis at which the voting phase closes. After this moment
+   *  new ballots are rejected and trustee approvals no longer get
+   *  invalidated by incoming votes, so the aggregate stabilises and
+   *  the threshold can be reached once. If absent, voting is open
+   *  indefinitely (approvals get reset on every new ballot — useful
+   *  for lightweight polls, bad UX for ceremonious ones). */
+  votesCloseAt?: number;
 }
+
+/**
+ * Voting phase derived from `votesCloseAt` and the current time.
+ *
+ * `voting`   — ballots accepted; approvals submitted now may be
+ *              invalidated by subsequent ballots.
+ * `tallying` — voting has closed; no new ballots; approvals accumulate
+ *              against the final aggregate and cross the threshold once.
+ * `open`     — no close time set; behaves like a perpetual poll.
+ */
+export type ProposalPhase = 'voting' | 'tallying' | 'open';
+
+export function proposalPhase(
+  p: Proposal,
+  now: number = Date.now(),
+): ProposalPhase {
+  if (typeof p.votesCloseAt !== 'number') return 'open';
+  return now < p.votesCloseAt ? 'voting' : 'tallying';
+}
+
+// Submission deadline for World Build 3: 2026-04-27 04:00 JST = 19:00 UTC
+// on 2026-04-26. Demo proposal voting closes at the deadline so judges
+// can watch the tally ceremony on submission day.
+const DEMO_CLOSE_AT_UTC_MS = Date.UTC(2026, 3 /* April */, 26, 19, 0, 0);
 
 export const DEMO_PROPOSAL: Proposal = {
   id: 'demo-2026-04',
@@ -58,6 +89,7 @@ export const DEMO_PROPOSAL: Proposal = {
     { id: 'mixed', label: 'Mixed — depends on use case' },
   ],
   createdAt: 0,
+  votesCloseAt: DEMO_CLOSE_AT_UTC_MS,
 };
 
 const HARDCODED: Record<string, Proposal> = {

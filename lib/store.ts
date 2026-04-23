@@ -5,8 +5,12 @@
 // - Local dev / CI: falls back to an in-memory Map.
 //
 // Data model (per proposal):
-//   SET  vohu:proposal:<id>:nullifiers      -> used to dedup Sybil
-//   LIST vohu:proposal:<id>:ballots         -> JSON { nullifier, ciphertextVec[], receivedAt }
+//   HASH vohu:proposal:<id>:ballots    field=nullifier  value=JSON BallotRecord
+//
+// The hash keying on the nullifier gives us Sybil dedup for free (one
+// entry per voter) and lets a voter revise their ballot before voting
+// closes without us needing to track insertion order. Count is HLEN,
+// listing is HVALS.
 //
 // The server NEVER decrypts individual ciphertexts. Aggregation is done
 // homomorphically in /lib/tally.ts; only the aggregate is decrypted at
@@ -27,8 +31,7 @@ const redis =
     ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN })
     : null;
 
-const memBallots = new Map<string, BallotRecord[]>();
-const memNullifiers = new Map<string, Set<string>>();
+const memBallots = new Map<string, Map<string, BallotRecord>>();
 
 export interface BallotRecord {
   nullifier: string;
@@ -37,17 +40,32 @@ export interface BallotRecord {
   receivedAt: number;
 }
 
-const kNullifiers = (proposalId: string) =>
-  `vohu:proposal:${proposalId}:nullifiers`;
+/** Outcome of a ballot submission. */
+export type SubmitOutcome = 'accepted' | 'revised';
+
 const kBallots = (proposalId: string) => `vohu:proposal:${proposalId}:ballots`;
 
-/** `true` if the nullifier was newly recorded (vote counts), `false` if it
- *  had already voted (Sybil dedup). */
+function memHash(proposalId: string): Map<string, BallotRecord> {
+  let h = memBallots.get(proposalId);
+  if (!h) {
+    h = new Map();
+    memBallots.set(proposalId, h);
+  }
+  return h;
+}
+
+/**
+ * Record (or replace) a ballot for `nullifier` on `proposalId`.
+ * Returns `accepted` for a first ballot, `revised` when an existing
+ * ballot for the same nullifier was overwritten. Phase gating (reject
+ * after voting closes) is enforced by the caller — this function just
+ * writes.
+ */
 export async function submitBallot(
   proposalId: string,
   nullifier: string,
   ciphertextVec: string[],
-): Promise<boolean> {
+): Promise<SubmitOutcome> {
   const record: BallotRecord = {
     nullifier,
     ciphertextVec,
@@ -55,53 +73,57 @@ export async function submitBallot(
   };
 
   if (redis) {
-    const added = await redis.sadd(kNullifiers(proposalId), nullifier);
-    if (added === 0) return false;
-    await redis.rpush(kBallots(proposalId), JSON.stringify(record));
-    return true;
+    const added = await redis.hset(kBallots(proposalId), {
+      [nullifier]: JSON.stringify(record),
+    });
+    // Upstash hset returns the number of NEW fields created (0 if the
+    // field already existed and was updated).
+    return added === 0 ? 'revised' : 'accepted';
   }
 
-  let nullSet = memNullifiers.get(proposalId);
-  if (!nullSet) {
-    nullSet = new Set();
-    memNullifiers.set(proposalId, nullSet);
-  }
-  if (nullSet.has(nullifier)) return false;
-  nullSet.add(nullifier);
-  let list = memBallots.get(proposalId);
-  if (!list) {
-    list = [];
-    memBallots.set(proposalId, list);
-  }
-  list.push(record);
-  return true;
+  const h = memHash(proposalId);
+  const existed = h.has(nullifier);
+  h.set(nullifier, record);
+  return existed ? 'revised' : 'accepted';
 }
 
 export async function getBallots(proposalId: string): Promise<BallotRecord[]> {
   if (redis) {
-    const entries = await redis.lrange<string>(kBallots(proposalId), 0, -1);
+    const entries = (await redis.hvals(kBallots(proposalId))) as unknown[];
     return entries
       .map(raw => {
         try {
-          // Upstash already parses JSON when it can; tolerate both shapes.
-          if (typeof raw === 'string') {
-            return JSON.parse(raw) as BallotRecord;
-          }
-          return raw as unknown as BallotRecord;
+          if (typeof raw === 'string') return JSON.parse(raw) as BallotRecord;
+          return raw as BallotRecord;
         } catch {
           return null;
         }
       })
       .filter((r): r is BallotRecord => Boolean(r));
   }
-  return memBallots.get(proposalId) ?? [];
+  return Array.from(memHash(proposalId).values());
 }
 
 export async function ballotCount(proposalId: string): Promise<number> {
   if (redis) {
-    return await redis.scard(kNullifiers(proposalId));
+    return (await redis.hlen(kBallots(proposalId))) as number;
   }
-  return memNullifiers.get(proposalId)?.size ?? 0;
+  return memHash(proposalId).size;
+}
+
+/** True if this nullifier has already voted on this proposal. */
+export async function hasVoted(
+  proposalId: string,
+  nullifier: string,
+): Promise<boolean> {
+  if (redis) {
+    const exists = (await redis.hexists(
+      kBallots(proposalId),
+      nullifier,
+    )) as number;
+    return exists === 1;
+  }
+  return memHash(proposalId).has(nullifier);
 }
 
 export const isPersistent = Boolean(redis);

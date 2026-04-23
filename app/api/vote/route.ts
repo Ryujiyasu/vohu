@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyCloudProof, VerificationLevel } from '@worldcoin/minikit-js';
 import { verifyMessage } from 'viem';
 import { ballotCount, submitBallot } from '@/lib/store';
-import { getProposal } from '@/lib/proposal';
+import { getProposal, proposalPhase } from '@/lib/proposal';
 import { attributionMessage } from '@/lib/attribution';
 import { buildReceiptMessage } from '@/lib/receipt';
 
@@ -89,6 +89,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: 'ciphertext vector shape mismatch' },
       { status: 400 },
+    );
+  }
+
+  // Phase gate: ballots only accepted while voting is open. Once the
+  // close time is past, the aggregate is frozen so trustee approvals
+  // can accumulate undisturbed.
+  const phase = proposalPhase(proposal);
+  if (phase === 'tallying') {
+    return NextResponse.json(
+      {
+        error: 'voting has closed for this proposal',
+        code: 'voting_closed',
+        closedAt: proposal.votesCloseAt,
+        phase,
+      },
+      { status: 403 },
     );
   }
 
@@ -255,11 +271,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // -- Sybil binding: single-use nullifier dedup.
-  const accepted = await submitBallot(proposalId, nullifier, ciphertextVec);
-  if (!accepted) {
-    return NextResponse.json({ error: 'already voted' }, { status: 409 });
-  }
+  // Record the ballot. Keyed by nullifier in storage, so a second
+  // submission during the voting phase overwrites the first —
+  // voters can revise until the close time.
+  const outcome = await submitBallot(proposalId, nullifier, ciphertextVec);
 
-  return NextResponse.json({ ok: true, total: await ballotCount(proposalId) });
+  return NextResponse.json({
+    ok: true,
+    outcome,
+    total: await ballotCount(proposalId),
+    phase,
+    votesCloseAt: proposal.votesCloseAt,
+  });
 }

@@ -20,7 +20,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ballotCount, getBallots } from '@/lib/store';
-import { getProposal } from '@/lib/proposal';
+import { getProposal, proposalPhase } from '@/lib/proposal';
 import { getPublicKey, getThresholdParams } from '@/lib/keys';
 import {
   Partial as ThresholdPartial,
@@ -73,6 +73,8 @@ export async function GET(req: NextRequest) {
 
   const approved = approvals.length >= thresholdParams.threshold;
 
+  const phase = proposalPhase(proposal);
+
   if (!approved || total === 0) {
     return NextResponse.json({
       proposal,
@@ -83,6 +85,8 @@ export async function GET(req: NextRequest) {
       threshold: thresholdParams.threshold,
       totalParties: thresholdParams.totalParties,
       ciphertextPreview,
+      phase,
+      votesCloseAt: proposal.votesCloseAt ?? null,
     });
   }
 
@@ -104,5 +108,7 @@ export async function GET(req: NextRequest) {
     threshold: thresholdParams.threshold,
     totalParties: thresholdParams.totalParties,
     ciphertextPreview,
+    phase,
+    votesCloseAt: proposal.votesCloseAt ?? null,
   });
 }
