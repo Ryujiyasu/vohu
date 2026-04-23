@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.37.0",
+    "@worldcoin/idkit": "^2.4.2",
     "@worldcoin/minikit-js": "1.11.0",
     "@xmtp/browser-sdk": "^7.0.0",
     "@xmtp/node-sdk": "^6.0.0",

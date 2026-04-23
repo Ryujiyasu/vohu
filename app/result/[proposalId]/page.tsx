@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useInVerifiedHumanContext } from '@/lib/prome';
-import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
+import Link from 'next/link';
+import { obfuscate } from '@/lib/prome';
 import { DEMO_PROPOSAL, Proposal } from '@/lib/proposal';
 
 interface TallyResponse {
@@ -19,12 +19,18 @@ interface TallyResponse {
 
 export default function ResultPage() {
   const { proposalId } = useParams<{ proposalId: string }>();
-  const isHuman = useInVerifiedHumanContext();
+  const [nullifier, setNullifier] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [data, setData] = useState<TallyResponse | null>(null);
   const [showServerView, setShowServerView] = useState(false);
 
   useEffect(() => {
-    if (isHuman !== true) return;
+    setNullifier(sessionStorage.getItem('nullifier'));
+    setAuthChecked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!nullifier) return;
     const load = () =>
       fetch(`/api/tally?proposalId=${encodeURIComponent(proposalId)}`)
         .then(r => r.json())
@@ -33,18 +39,50 @@ export default function ResultPage() {
     load();
     const id = setInterval(load, 4000);
     return () => clearInterval(id);
-  }, [proposalId, isHuman]);
+  }, [proposalId, nullifier]);
 
-  if (isHuman === null || isHuman === false) {
+  if (!authChecked) {
     return (
-      <ObfuscatedScreen plaintext={`Results for ${proposalId}\nEncrypted ballots\nTally`} />
+      <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
+        <p className="pt-12 text-center text-slate-400">…</p>
+      </main>
+    );
+  }
+
+  // Identity-bound gate: aggregate tally is safe for Chrome-after-login,
+  // but strangers don't get even aggregates. Runtime binding (prome) is not
+  // required here because the aggregate reveals no individual ballot.
+  if (!nullifier) {
+    const cipher = obfuscate(
+      `Results for ${proposalId}\nEncrypted ballots\nTally`.repeat(8),
+    );
+    return (
+      <main className="min-h-screen bg-black text-emerald-400 font-mono p-6 pb-40">
+        <pre className="whitespace-pre-wrap break-words text-xs opacity-70">
+          {cipher}
+        </pre>
+        <div className="fixed bottom-8 left-0 right-0 text-center text-white font-sans px-6">
+          <p className="mb-2">Results are visible to verified humans.</p>
+          <p className="text-sm text-slate-400 mb-6">
+            Aggregate only — no individual ballot is revealed.
+          </p>
+          <Link
+            href={`/login?next=${encodeURIComponent(`/result/${proposalId}`)}`}
+            className="inline-block px-6 py-3 bg-white text-black rounded-full font-semibold"
+          >
+            Login
+          </Link>
+        </div>
+      </main>
     );
   }
 
   if (!data) {
     return (
       <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-        <p className="pt-12 text-center text-slate-400">Computing homomorphic tally…</p>
+        <p className="pt-12 text-center text-slate-400">
+          Computing homomorphic tally…
+        </p>
       </main>
     );
   }
@@ -56,7 +94,13 @@ export default function ResultPage() {
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
       <div className="max-w-md mx-auto pt-12 pb-20">
-        <h1 className="text-2xl font-bold mb-2 leading-snug">{p.title}</h1>
+        <Link
+          href="/"
+          className="text-xs text-slate-400 hover:text-slate-200"
+        >
+          ← vohu
+        </Link>
+        <h1 className="text-2xl font-bold mt-6 mb-2 leading-snug">{p.title}</h1>
         <p className="text-slate-400 mb-6">
           {data.total} verified human{data.total === 1 ? '' : 's'} voted
         </p>
