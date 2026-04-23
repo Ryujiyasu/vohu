@@ -51,6 +51,16 @@ v1 is what you can actually cast a ballot on today. Everything below v1 is a res
 
 ---
 
+## Why now
+
+April 17, 2026 — one week before World Build 3 — World ID 4.0 shipped with a credential issuer registry that opens the identity layer to arbitrary verified attributes. Government ID is already live; employment, education, reputation are in flight; health records and task-completion credentials are on the published roadmap. Tinder, Zoom, DocuSign, Okta, Vercel, Browserbase, and Exa integrated in the first week.
+
+What that means for an aggregation primitive: every verified human on World will soon carry a container of signed attributes. An identity container without an aggregation layer is half a system — a ballot can be cast, but a salary median, an HLA-compatibility check, a survey-of-surveys, or an organ-donor match cannot run without someone reconstituting the plaintext pool the identity layer was supposed to protect.
+
+**Identity layer: World. Aggregation layer: vohu.** Voting is the first application; it's the cleanest proof that the math holds in production. Matching, threshold coordination, and sensitive-attribute compatibility are the same primitive on different application surfaces, and every one of them becomes reachable as the credential registry fills out.
+
+---
+
 ## The problem
 
 Existing voting tools are stuck at a fork in the road:
@@ -162,6 +172,27 @@ Three taps: verify, vote, reveal aggregate.
 > Passkeys guard the front door.
 > Paillier guards the ballot box.
 > t-of-N trustees hold the keys to the box.
+
+### The aggregation paradox
+
+Collective truth needs collective data. But collecting data in plaintext creates a honeypot that every attacker, every subpoena, every compromised admin, and every future AI training pipeline will eventually target. The asymmetry is sharp:
+
+- **Individual data, held by individuals** — a personal risk. Tolerable.
+- **Aggregated data, readable by an operator** — a collective risk. Not tolerable.
+
+vohu dissolves the paradox: **collect without aggregating in plaintext.** Contributions arrive as ciphertexts. The server computes on ciphertexts. Only the aggregate — the sum, the match, the threshold result — is ever decrypted, and only by the parties authorized to see it.
+
+This is not a policy. It is a property of the mathematics.
+
+| Risk | Traditional form / poll | vohu |
+|---|---|---|
+| Server compromise leaks individual responses | ✗ | ✓ — no plaintext responses to leak |
+| Admin goes rogue or is bribed | ✗ | ✓ — no single party holds enough key material |
+| Subpoena compels disclosure of individual ballots | ✗ | ✓ — cannot disclose what does not exist in plaintext |
+| Responses become AI training data | ✗ | ✓ — ciphertext is training-resistant noise |
+| Cross-service correlation re-identifies voters | ✗ | ✓ — no per-voter plaintext to correlate |
+
+> **We don't promise not to look. We built a system that cannot look.**
 
 ### Trust assumption (v1, explicitly)
 

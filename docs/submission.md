@@ -37,7 +37,7 @@ Time markers are approximate — aim to finish by 3:00 even if you compress.
 > Every ballot must clear two cryptographic checks server-side: World ID's cloud-side proof verification, and a Secure-Enclave-backed signature over the ciphertext. An attacker who steals your nullifier can't cast a ballot because the device signature requires your phone's hardware. That combination — identity binding plus device binding — is what other systems advertise but don't actually enforce end-to-end.
 
 **2:15 — The runtime layer.**
-> Open the same URL in Chrome and you get a wall of green ciphertext with "open in World App to decrypt." That's not security theater — it's the runtime binding. Voting is an action whose content matters, not just its identity, and a ballot that's observable in real time can't be receipt-free. We close that surface by construction.
+> Open the same URL in Chrome and you get a wall of green ciphertext with "open in World App to decrypt." That's not security theater — it's the runtime binding. Voting is an action whose content matters, not just its identity, and a ballot that's observable in real time can't be receipt-free. We close that surface by construction. **We don't promise not to look. We built a system that cannot look.**
 
 **2:30 — What vohu actually is.**
 > I'm not pitching a voting app. I'm pitching a thesis: threshold homomorphic aggregation on verified humans is a new category, and that category will have multiple billion-dollar applications on top. Voting is the cleanest surface to prove the primitive — the tally is pure addition, the answer is the aggregate, the threat model fits a slide. Matching, medical compatibility, salary transparency, peer review — same primitive, different surface. vohu is the hello world.
