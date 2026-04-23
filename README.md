@@ -268,15 +268,37 @@ Known v1 limits, called out explicitly:
 - **Proposal registry**: v1 ships with a single hard-coded demo proposal. Dynamic proposals are v2.
 - **Non-transferable receipts**: receipts are not cryptographically device-bound yet. v2 adds hyde+MiniKit `signMessage` composition.
 
-## What's next
+## Versioned roadmap
 
-- **Distributed share delivery + verifiable partial decryption** — each trustee's share lives on their own device (TPM / paper key / USB); partials include zero-knowledge proofs so the combine step can detect a misbehaving trustee.
-- **Post-quantum homomorphic tally** — migrate from Paillier to a lattice-based HE primitive (BGV / BFV / TFHE) once the tally surface expands beyond addition. See the [`plat`](https://gitlab.com/Ryujiyasu/plat) crate.
-- **Non-transferable receipts** — combine hyde's ML-KEM-768 ciphertext with a MiniKit `signMessage` challenge so a receipt is bound to the Secure Enclave of the device that cast the vote. A coerced user can hand over the ciphertext; the coercer's device will never decrypt it. See `/hyde-probe`.
-- **FHE-side tally** — replace mock-decrypt aggregation with a homomorphic tally served from a trusted FHE worker.
-- **Proposal registry** — create and publish proposals without rebuilding the client.
-- **XMTP group scoping** — restrict a poll's eligible voters to members of a specific World Chat group, using XMTP MLS group membership as the scoping layer. The "chat-scoped governance vote" use case.
-- **[`hyde-webauthn`](https://gitlab.com/Ryujiyasu/hyde-webauthn)** companion — same crypto ecosystem, exposed as a Linux FIDO2/WebAuthn authenticator so Linux users can use Google and other WebAuthn sites without a security key.
+vohu is structured so that each version adds one clear property without breaking the ones before it. The order below is also the publishing order we expect to hit.
+
+### v1 — *this submission* (April 2026)
+
+- ✅ World ID 4.0 Orb nullifier — proof-of-personhood.
+- ✅ Paillier-encrypted ballots (2048-bit, on-device).
+- ✅ Homomorphic aggregation — server never decrypts an individual ballot.
+- ✅ Threshold Paillier **2-of-3 trustees** — λ is split at proposal creation, reconstructed only via t partial decryptions of the aggregate.
+- ✅ `prome` gating — ciphertext to anything that isn't World App.
+- ✅ Redis persistence, Vercel deploy, zero auth friction.
+
+### v2 — Seoul Build Week (May 10–18, 2026)
+
+- **Distributed share delivery.** Each of the N trustee shares is held on a distinct device — the server never sees any share. (v1 co-locates for demo.)
+- **Verifiable partial decryption.** Each trustee publishes a NIZK proving their partial was computed correctly, so the combine step can reject a byzantine trustee.
+- **Non-transferable receipts.** Each voter receives a Paillier-encrypted receipt whose decryption key is gated by a MiniKit `signMessage` on their device's Secure Enclave. The ciphertext can be copied anywhere; without the device, it's noise. (Coercion resistance, partial.)
+- **XMTP-backed chat scoping.** Proposal scoped to a specific World Chat group; eligible voters = group members at snapshot time (verified via XMTP MLS membership).
+- **Proposal registry + multi-proposal UI.** No more hard-coded `demo-2026-04`; organizers create, publish, and close proposals from the app.
+
+### v3 — post-Seoul research track
+
+- **Receipt-freeness via MACI-style key rotation.** A voter can overwrite their own ballot before the close-of-poll, with the replacement using a freshly rotated key. A coercer who believes they've purchased a vote cannot tell whether it was replaced. This is the classic MACI bribery-resistance mechanism, applied on top of vohu's proof-of-personhood layer — something no existing system combines.
+- **Lattice-based homomorphic tally.** Migrate from Paillier (RSA-class, not PQ) to BFV / BGV / TFHE via the [`plat`](https://gitlab.com/Ryujiyasu/plat) crate. Unlocks ranked-choice, approval, quadratic, and weighted-delegation voting — the tally stops being pure addition.
+- **Distributed Key Generation (DKG).** No trusted dealer at keygen; trustees run a DKG protocol so λ is never known to any single party, including the server, at any point in time.
+- **Academic writeup.** One-paper summary of the v1→v3 path: *"Proof-of-personhood-native secret-ballot voting with threshold homomorphic tally."*
+
+### Parallel companion — [`hyde-webauthn`](https://gitlab.com/Ryujiyasu/hyde-webauthn)
+
+Same crypto ecosystem (`hyde` + `janus`), packaged as a Linux FIDO2 / WebAuthn authenticator. Lets a Linux machine register as a passkey with Google (and other WebAuthn RPs) without a dedicated security key. Tracks its own release cycle; shares the identity model with vohu's v2 hyde-bound receipts.
 
 ## Related repos
 
@@ -319,6 +341,33 @@ Prior art in privacy-preserving voting falls into three mature camps. vohu does 
 > MACI solved bribery in 2019 but assumed one Ethereum key per human.
 > Vocdoni solved scale but uses tokens as proxies for humanity.
 > vohu is the first system where "one human, one secret vote" is true at the cryptographic layer, not the operational layer — because World ID made it possible.*
+
+## References
+
+Core cryptographic primitives that vohu composes:
+
+- Paillier, P. (1999). [*Public-Key Cryptosystems Based on Composite Degree Residuosity Classes.*](https://link.springer.com/chapter/10.1007/3-540-48910-X_16) EUROCRYPT '99. — the additive-homomorphic cipher that protects every ballot in vohu.
+- Shoup, V. (2000). [*Practical Threshold Signatures.*](https://www.shoup.net/papers/thsig.pdf) EUROCRYPT '00. — the partial-signature + Lagrange-combine technique we adapt for threshold Paillier.
+- Damgård, I., Jurik, M. (2001). [*A Generalisation, a Simplification and Some Applications of Paillier's Probabilistic Public-Key System.*](https://link.springer.com/chapter/10.1007/3-540-44586-2_9) PKC '01. — the canonical threshold Paillier construction.
+- Hazay, C., Mikkelsen, G. L., Patra, A., Venkitasubramaniam, M. (2017). [*Efficient RSA Key Generation and Threshold Paillier in the Two-Party Setting.*](https://eprint.iacr.org/2011/494) Journal of Cryptology. — engineering-grade variant of the scheme.
+
+Electronic voting foundations:
+
+- Benaloh, J. (1987). [*Verifiable Secret-Ballot Elections.*](https://www.microsoft.com/en-us/research/publication/verifiable-secret-ballot-elections/) PhD thesis, Yale University. — the origin of homomorphic tallying for secret ballots.
+- Cramer, R., Gennaro, R., Schoenmakers, B. (1997). [*A Secure and Optimally Efficient Multi-Authority Election Scheme.*](https://link.springer.com/chapter/10.1007/3-540-69053-0_10) EUROCRYPT '97. — threshold ElGamal elections; architectural ancestor of Helios.
+- Adida, B. (2008). [*Helios: Web-based Open-Audit Voting.*](https://www.usenix.org/legacy/events/sec08/tech/full_papers/adida/adida.pdf) USENIX Security '08. — the system vohu's `Related work` table benchmarks against.
+- Juels, A., Catalano, D., Jakobsson, M. (2005). [*Coercion-Resistant Electronic Elections.*](https://link.springer.com/chapter/10.1007/11957454_3) WPES '05. — foundational work on receipt-freeness; informs the v2 hyde-bound receipt roadmap.
+
+Recent / practical systems cited above:
+
+- Buterin, V. (2019). [*Minimum Anti-Collusion Infrastructure.*](https://ethresear.ch/t/minimal-anti-collusion-infrastructure/5433) ethresear.ch. Implementation: [`privacy-scaling-explorations/maci`](https://maci.pse.dev/).
+- Vocdoni / DAVINCI Protocol (2024). [*Specification*](https://davinci.vote/). — zk-SNARK-based multi-chain voting infrastructure.
+
+Identity and distribution infrastructure:
+
+- Tools for Humanity (2026). [*World ID 4.0 — Proof of Personhood.*](https://world.org/world-id) — the proof-of-personhood layer vohu builds on.
+- Tools for Humanity (2025). [*Mini Apps 1.2 & Developer Rewards.*](https://world.org/blog/announcements/world-launches-mini-apps-300k-dev-rewards-pilot-inspire-human-first-apps) — the World App distribution channel.
+- Sign-In With Ethereum — [EIP-4361](https://eips.ethereum.org/EIPS/eip-4361). — the SIWE scheme MiniKit's `walletAuth` implements for account binding.
 
 ## Credits
 
