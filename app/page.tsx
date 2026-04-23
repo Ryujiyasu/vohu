@@ -82,6 +82,16 @@ export default function Dashboard() {
               },
             ]}
           />
+          <Tile
+            unlocked
+            title="Developer probes"
+            bindings="preflight"
+            items={[
+              { label: 'XMTP — group discovery probe', href: '/xmtp-probe' },
+              { label: 'hyde — WASM + ML-KEM round-trip', href: '/hyde-probe' },
+              { label: 'argo — mock ballot-validity proof', href: '/argo-probe' },
+            ]}
+          />
         </div>
 
         <p className="mt-12 text-[11px] text-slate-500 text-center leading-relaxed">
