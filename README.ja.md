@@ -106,17 +106,17 @@ v1 は **閾値 Paillier t=2 / N=3 trustee**（[`lib/threshold-paillier.ts`](./l
 
 **v1 のデモ上の妥協点**: 3 つの share が同じ Upstash Redis に同居している（本来は各 trustee 端末に配布）。暗号スキーム自体は production と同一（Shoup スタイル部分復号 + Lagrange 合成）で、配布経路だけが異なる。v2 で各 share を別端末に分散配布する。
 
-## 3 つの束縛 — なぜ `/vote` を World App に閉じるのか
+## 3 つの束縛 — 投票が通過するために必要な関門
 
-首尾一貫した投票 action には 3 つの暗号的束縛が同時に成立している必要がある。**ログイン系は最初の 2 つで足りるが、投票系は 3 つ目も必要**。
+首尾一貫した投票 action には 3 つの束縛が必要。**最初の 2 つは `POST /api/vote` で暗号的に検証され、3 つ目は Mini App runtime の運用条件 + 2 つ目が物理端末を要求する事実の組み合わせで担保される**。ログイン系は最初の 2 つで足りるが、投票系は 3 つとも同時に必要。
 
-| 束縛 | 主張 | vohu での実装 |
+| 束縛 | 何を実際に証明するか | vohu での enforcement |
 |---|---|---|
-| **Identity（人）** | 「この nullifier は生物学的に一意な人間に対応する」 | World ID 4.0 Orb 登録 + （人 × action）単発 nullifier |
-| **Device（端末）** | 「この authenticator は特定のハードウェアに縛られている」 | World App 内の Secure Enclave / TPM バックアップされた passkey |
-| **Runtime（実行環境）** | 「この端末の持ち主が **今、この瞬間、プライベートな文脈で** 操作している」 | `prome` — `/vote` と `/result` を World App WebView 限定にゲート |
+| **Identity（人）**（暗号的） | この nullifier は Orb 検証済の人間が登録 action を実行して生成した、かつこの提案でまだ使われていない | [`verifyCloudProof`](https://docs.world.org/world-id/id/cloud) が Groth16 proof + Merkle root を World ID の verify エンドポイントに投げて round-trip 検証。`nullifier_hash` は per-proposal の dedup state と照合 |
+| **Device（端末）**（暗号的） | 投票ペイロードは投票者の in-app wallet 鍵で署名されており、鍵は端末の secure element（iOS Secure Enclave、Android StrongBox、セルフホストの場合は [`hyde`](https://gitlab.com/Ryujiyasu/hyde) TPM）内でエクスポート不可 | `MiniKit.signMessage` が `vohu-receipt/v1 + proposalId + nullifier + sha256(ciphertextVec) + issuedAt` に対する ECDSA 署名を生成。サーバーは同じメッセージを再構築して [`viem.verifyMessage`](https://viem.sh/docs/utilities/verifyMessage) で検証 |
+| **Operational（運用）**（非暗号） | その端末を持つ人間が **今、この瞬間、プライベートな文脈で** 操作している | `prome` は World App runtime 外で `/vote` を描画しないし有効な投票を成立させない。device 署名は runtime 内でしか作れない。verify と signMessage の組み合わせが投票者の電話を投票者の手の中に要求する |
 
-ログインや attestation は Identity + Device だけで十分。しかし投票は **選択の内容そのもの**（投票者のアイデンティティだけでなく）が守るべき価値。選択がリアルタイムで観測・記録できるなら、どれほど強い暗号を使っても receipt-free にはならない。
+**暗号的なのは (i) と (ii) だけ**。devtools で `window.WorldApp` を偽装した攻撃者は `prome` の見た目のゲートは破れるが、依然として `verifyCloudProof` が通る proof や Secure Enclave 裏付けの署名は偽造できない — 投票はサーバーの境界で拒否される。Operational binding は暗号的主張ではなく、前 2 つの束縛 + Mini App パッケージングの組み合わせによって「隣で観察する coercion」が割に合わなくなる、という観察。Receipt-free な bribery 耐性は v3 のターゲット（MACI 風の鍵ローテーション）。
 
 ### なぜ Chrome では runtime binding が壊れるか
 

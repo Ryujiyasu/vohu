@@ -143,17 +143,17 @@ v1's **demo simplification** is that all three shares are co-located in the same
 
 v2 distributes each share to a distinct trustee device; partial decryption happens client-side; the server never sees any share.
 
-## The three bindings — why vohu gates `/vote` to World App
+## The three bindings — what a ballot needs to clear
 
-A coherent voting action requires three cryptographic bindings to all hold at the same time. Login systems need only the first two. Voting systems need all three.
+A coherent voting action needs three distinct bindings. The first two are enforced cryptographically by `POST /api/vote`; the third is operational, enforced by the constraints of the Mini App runtime combined with the fact that the second binding requires a physical device. Login systems typically stop at the first two. Voting systems need all three to hold simultaneously.
 
-| Binding | Claim it makes | How vohu enforces it |
+| Binding | What it actually proves | How vohu enforces it |
 |---|---|---|
-| **Identity** | "this nullifier corresponds to a biologically-unique human" | World ID 4.0 Orb at enrollment time; single-use nullifier per (human × action) |
-| **Device** | "this authenticator is bound to a specific piece of hardware" | Secure Enclave / TPM-backed passkey inside World App |
-| **Runtime** | "the human who owns this device is operating it **right now**, in a private context" | `prome` — `/vote` and `/result` are gated to the World App WebView on the user's own phone |
+| **Identity** (cryptographic) | This ballot's nullifier came from an Orb-verified human performing the registered action, and has not been used before on this proposal. | [`verifyCloudProof`](https://docs.world.org/world-id/id/cloud) round-trips the Groth16 proof + Merkle root against World ID's verify endpoint; `nullifier_hash` is then checked against per-proposal dedup state. |
+| **Device** (cryptographic) | The ballot payload was signed by the voter's in-app wallet key, which lives in the device's secure element (Secure Enclave on iOS, StrongBox on Android, [`hyde`](https://gitlab.com/Ryujiyasu/hyde)-backed TPM on self-host) and is not exportable. | `MiniKit.signMessage` produces an ECDSA signature over `vohu-receipt/v1 + proposalId + nullifier + sha256(ciphertextVec) + issuedAt`. The server re-derives that message and calls [`viem.verifyMessage`](https://viem.sh/docs/utilities/verifyMessage). |
+| **Operational** (not cryptographic) | The human who controls the device is actually operating it right now, in a private context — not being coerced by a bystander watching the screen. | `prome` refuses to render `/vote` or cast a valid ballot outside the World App runtime; the device signature can only be produced inside that runtime; verify and signMessage together require the voter's phone to be in the voter's hand. |
 
-Login and attestation only need identity + device. Voting needs runtime binding too, because the *content of the choice* — not just the identity of the voter — is the value being protected. If a voter's choice can be observed or recorded in real time, the system cannot be receipt-free, regardless of how strong the underlying cryptography is.
+**Only (i) and (ii) are cryptographic.** An attacker who spoofs `window.WorldApp` in devtools breaks `prome`'s visual gate but still cannot forge a `verifyCloudProof`-valid proof or a Secure-Enclave-backed signature — the ballot is rejected at the server boundary. The operational binding is not a cryptographic claim; it is the observation that the other two bindings, together with the Mini App packaging, make sit-next-to-the-voter coercion more expensive than the adversary typically bears. Receipt-free bribery resistance remains a v3 target (MACI-style key rotation).
 
 ### Why Chrome fails the runtime binding
 

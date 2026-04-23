@@ -51,6 +51,19 @@ function LoginInner() {
       });
       const payload = result.finalPayload;
       if (payload.status === 'success' && 'nullifier_hash' in payload) {
+        // Persist the full verification envelope for /vote to re-present
+        // to the server for cloud-side proof verification. /api/vote
+        // rejects ballots whose proof does not round-trip through
+        // World ID's verify endpoint for (app_id, action, nullifier).
+        sessionStorage.setItem(
+          'worldid_proof',
+          JSON.stringify({
+            proof: payload.proof,
+            merkle_root: payload.merkle_root,
+            nullifier_hash: payload.nullifier_hash,
+            verification_level: payload.verification_level,
+          }),
+        );
         finish(payload.nullifier_hash);
       } else {
         setError('Verification did not complete.');

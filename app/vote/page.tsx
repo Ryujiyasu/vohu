@@ -83,7 +83,48 @@ export default function VotePage() {
     setStage('Encrypting ballot (Paillier)…');
     const ciphertextVec = encryptBallot(pk, choiceIdx, proposal.options.length);
 
-    setStage('Submitting ciphertext…');
+    // Require the full World ID verification envelope from /login. The
+    // server validates proof + merkle_root + nullifier_hash against
+    // World ID's cloud endpoint before accepting the ballot.
+    const proofStr = sessionStorage.getItem('worldid_proof');
+    if (!proofStr) {
+      setError('World ID proof missing — please log in again');
+      setSubmitting(false);
+      setStage(null);
+      return;
+    }
+    const worldIdProof = JSON.parse(proofStr);
+
+    setStage('Signing ballot with device key…');
+    const digest = await ballotDigest(ciphertextVec);
+    const issuedAt = new Date().toISOString();
+    const message = buildReceiptMessage({
+      proposalId: proposal.id,
+      nullifier,
+      ballotDigest: digest,
+      issuedAt,
+    });
+    let deviceSignature: string;
+    let deviceAddress: string;
+    try {
+      const signed = await MiniKit.commandsAsync.signMessage({ message });
+      const signedPayload = signed.finalPayload;
+      if (signedPayload.status !== 'success') {
+        setError('device signature was rejected');
+        setSubmitting(false);
+        setStage(null);
+        return;
+      }
+      deviceSignature = signedPayload.signature;
+      deviceAddress = signedPayload.address;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'device signing failed');
+      setSubmitting(false);
+      setStage(null);
+      return;
+    }
+
+    setStage('Submitting ciphertext + proof + signature…');
     try {
       const res = await fetch('/api/vote', {
         method: 'POST',
@@ -92,36 +133,29 @@ export default function VotePage() {
           proposalId: proposal.id,
           nullifier,
           ciphertextVec,
+          worldIdProof,
+          ballotDigest: digest,
+          issuedAt,
+          deviceSignature,
+          deviceAddress,
         }),
       });
       if (res.ok) {
-        setStage('Signing device-bound receipt…');
+        setStage('Recording device-bound receipt…');
         try {
-          const digest = await ballotDigest(ciphertextVec);
-          const issuedAt = new Date().toISOString();
-          const message = buildReceiptMessage({
+          saveReceipt({
+            version: RECEIPT_VERSION,
             proposalId: proposal.id,
             nullifier,
             ballotDigest: digest,
             issuedAt,
+            message,
+            signature: deviceSignature,
+            address: deviceAddress,
           });
-          const signed = await MiniKit.commandsAsync.signMessage({ message });
-          const payload = signed.finalPayload;
-          if (payload.status === 'success') {
-            saveReceipt({
-              version: RECEIPT_VERSION,
-              proposalId: proposal.id,
-              nullifier,
-              ballotDigest: digest,
-              issuedAt,
-              message,
-              signature: payload.signature,
-              address: payload.address,
-            });
-          }
         } catch (e) {
-          // Receipt signing is best-effort. If the user rejects or we're
-          // outside a signMessage-capable runtime, the vote still stands.
+          // Receipt save is best-effort — the ballot has already been
+          // accepted server-side at this point.
           console.warn('receipt signing failed', e);
         }
         router.push(`/result/${proposal.id}`);
