@@ -11,6 +11,7 @@
 import { useState } from 'react';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
+import { BackBar } from '@/components/BackBar';
 import {
   createMiniKitSigner,
   getUserAddress,
@@ -107,7 +108,8 @@ export default function XmtpProbePage() {
 
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-      <div className="max-w-md mx-auto pt-12 space-y-4">
+      <div className="max-w-md mx-auto pt-8 space-y-4">
+        <BackBar />
         <h1 className="text-2xl font-bold">XMTP probe</h1>
         <p className="text-sm text-slate-400 leading-relaxed">
           Validate that an XMTP browser-sdk client can be constructed inside

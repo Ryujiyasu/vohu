@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
 import { createMiniKitSigner, getUserAddress } from '@/lib/xmtp-signer';
@@ -35,9 +36,15 @@ interface ProposalOptionDraft {
 
 type Phase =
   | { kind: 'idle' }
-  | { kind: 'connecting' }
+  | { kind: 'walletauth' }
+  | { kind: 'xmtp-init' }
+  | { kind: 'syncing' }
+  | { kind: 'listing' }
+  | { kind: 'inspecting'; done: number; total: number }
   | { kind: 'connected'; groups: GroupSummary[] }
   | { kind: 'err'; message: string };
+
+const MAX_GROUPS_SHOWN = 30;
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 8;
@@ -70,6 +77,9 @@ async function getClient(address: string): Promise<unknown> {
 
 export default function ProposePage() {
   const isHuman = useInVerifiedHumanContext();
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [nullifier, setNullifier] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [address, setAddress] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -92,6 +102,18 @@ export default function ProposePage() {
     setCloseAt(defaultCloseTime());
   }, []);
 
+  // Login gate: require a World ID nullifier before exposing the
+  // organiser UI. A proposal creator is an identifiable action on the
+  // server (the share URL identifies the organiser), so the same
+  // identity binding as /vote applies.
+  useEffect(() => {
+    if (isHuman !== true) return;
+    const n = sessionStorage.getItem('nullifier');
+    setNullifier(n);
+    setAuthChecked(true);
+    if (!n) router.push('/login?next=' + encodeURIComponent('/propose'));
+  }, [isHuman, router]);
+
   if (isHuman === null) {
     return (
       <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
@@ -104,48 +126,83 @@ export default function ProposePage() {
       <ObfuscatedScreen plaintext="vohu proposal organiser — create an XMTP-scoped poll" />
     );
   }
+  if (!authChecked || !nullifier) {
+    return (
+      <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
+        <p className="pt-12 text-center text-slate-400">Redirecting to login…</p>
+      </main>
+    );
+  }
 
   const connect = async () => {
     setError(null);
-    setPhase({ kind: 'connecting' });
     try {
+      setPhase({ kind: 'walletauth' });
       const addr = await getUserAddress();
       setAddress(addr);
+
+      setPhase({ kind: 'xmtp-init' });
       const client = (await getClient(addr)) as {
         conversations: {
           sync: () => Promise<void>;
           list: () => Promise<unknown[]>;
         };
       };
-      await client.conversations.sync();
-      const convs = await client.conversations.list();
 
-      const groups: GroupSummary[] = [];
-      for (const raw of convs) {
-        const c = raw as {
-          id: string;
-          conversationType?: string;
-          name?: (() => Promise<string>) | string;
-          members: () => Promise<unknown[]>;
-        };
-        // Filter to group conversations (skip DMs).
-        if (c.conversationType && c.conversationType !== 'group') continue;
-        let groupName = '(unnamed)';
-        try {
-          if (typeof c.name === 'function') groupName = (await c.name()) ?? groupName;
-          else if (typeof c.name === 'string') groupName = c.name;
-        } catch {
-          /* noop */
-        }
-        const members = await c.members();
-        groups.push({
-          id: c.id,
-          name: groupName,
-          memberCount: members.length,
+      setPhase({ kind: 'syncing' });
+      await client.conversations.sync();
+
+      setPhase({ kind: 'listing' });
+      const convs = (await client.conversations.list()) as Array<{
+        id: string;
+        conversationType?: string;
+        name?: (() => Promise<string>) | string;
+        members: () => Promise<unknown[]>;
+      }>;
+
+      // Drop DMs; cap at MAX_GROUPS_SHOWN so we don't spin on a huge inbox.
+      const candidates = convs
+        .filter(c => !c.conversationType || c.conversationType === 'group')
+        .slice(0, MAX_GROUPS_SHOWN);
+
+      setPhase({ kind: 'inspecting', done: 0, total: candidates.length });
+
+      // Inspect in small parallel batches: avoids n-second serial stalls
+      // on inboxes with many groups while not fanning out so wide that
+      // we DDoS the user's network.
+      const BATCH = 4;
+      const groups: GroupSummary[] = new Array(candidates.length);
+      for (let i = 0; i < candidates.length; i += BATCH) {
+        const slice = candidates.slice(i, i + BATCH);
+        await Promise.all(
+          slice.map(async (c, j) => {
+            let groupName = '(unnamed)';
+            try {
+              if (typeof c.name === 'function') {
+                groupName = (await c.name()) ?? groupName;
+              } else if (typeof c.name === 'string') {
+                groupName = c.name;
+              }
+            } catch {
+              /* noop */
+            }
+            let memberCount = 0;
+            try {
+              memberCount = (await c.members()).length;
+            } catch {
+              /* noop */
+            }
+            groups[i + j] = { id: c.id, name: groupName, memberCount };
+          }),
+        );
+        setPhase({
+          kind: 'inspecting',
+          done: Math.min(i + BATCH, candidates.length),
+          total: candidates.length,
         });
       }
 
-      setPhase({ kind: 'connected', groups });
+      setPhase({ kind: 'connected', groups: groups.filter(Boolean) });
     } catch (e) {
       setPhase({
         kind: 'err',
@@ -310,10 +367,39 @@ export default function ProposePage() {
               <p className="text-sm text-rose-400">{phase.message}</p>
             )}
           </div>
-        ) : phase.kind === 'connecting' ? (
-          <p className="text-slate-300 text-sm">
-            Connecting to XMTP (you may see signature prompts)…
-          </p>
+        ) : phase.kind === 'walletauth' ||
+          phase.kind === 'xmtp-init' ||
+          phase.kind === 'syncing' ||
+          phase.kind === 'listing' ||
+          phase.kind === 'inspecting' ? (
+          <div className="space-y-2 text-sm text-slate-300">
+            <p>
+              {phase.kind === 'walletauth' &&
+                'Requesting wallet signature (SIWE)…'}
+              {phase.kind === 'xmtp-init' &&
+                'Initializing XMTP client (watch for signature prompts)…'}
+              {phase.kind === 'syncing' && 'Syncing XMTP conversations…'}
+              {phase.kind === 'listing' && 'Listing groups…'}
+              {phase.kind === 'inspecting' &&
+                `Inspecting groups · ${phase.done} / ${phase.total}`}
+            </p>
+            {phase.kind === 'inspecting' && (
+              <div className="h-1 bg-slate-800 rounded overflow-hidden">
+                <div
+                  className="h-full bg-emerald-400"
+                  style={{
+                    width: `${
+                      phase.total === 0 ? 0 : (phase.done / phase.total) * 100
+                    }%`,
+                  }}
+                />
+              </div>
+            )}
+            <p className="text-[11px] text-slate-500">
+              First-time XMTP registration takes 30–60 s and requires a few
+              signature prompts. After that, connections are fast.
+            </p>
+          </div>
         ) : (
           <div className="space-y-6">
             <section>

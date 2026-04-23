@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 import { ObfuscatedScreen } from '@/components/ObfuscatedScreen';
+import { BackBar } from '@/components/BackBar';
 import {
   deserializePublicKey,
   encryptBallot,
@@ -247,7 +248,10 @@ function VotePageInner() {
 
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-      <div className="max-w-md mx-auto pt-12">
+      <div className="max-w-md mx-auto pt-8">
+        <div className="mb-4">
+          <BackBar />
+        </div>
         <div className="mb-2 text-xs text-emerald-400 font-mono">
           ✓ HUMAN VERIFIED
         </div>

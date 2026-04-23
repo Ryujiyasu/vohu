@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { argoInfo, proveAndVerify } from '@/lib/argo';
+import { BackBar } from '@/components/BackBar';
 
 type Status =
   | { kind: 'idle' }
@@ -72,6 +73,9 @@ export default function ArgoProbe() {
 
   return (
     <main style={{ fontFamily: 'ui-monospace, monospace', padding: '2rem', maxWidth: 720 }}>
+      <div style={{ marginBottom: '1rem' }}>
+        <BackBar />
+      </div>
       <h1>argo-wasm preflight</h1>
       <p style={{ color: '#666' }}>
         ballot-validity proof (mock backend) round-trip through argo-wasm.

@@ -13,6 +13,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { BackBar } from '@/components/BackBar';
 
 interface ProposalPayload {
   proposal: {
@@ -24,20 +25,6 @@ interface ProposalPayload {
     threshold: number;
     totalParties: number;
   };
-}
-
-function BackBar({ href }: { href: string }) {
-  return (
-    <div className="max-w-md mx-auto">
-      <Link
-        href={href}
-        className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white py-2"
-      >
-        <span aria-hidden>←</span>
-        <span>Back to results</span>
-      </Link>
-    </div>
-  );
 }
 
 interface TallyState {
@@ -121,7 +108,7 @@ function TrusteeInner() {
   if (!proposal) {
     return (
       <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-        <BackBar href={resultHref} />
+        <BackBar />
         <p className="pt-12 text-center text-slate-400">Loading…</p>
       </main>
     );
@@ -136,7 +123,7 @@ function TrusteeInner() {
 
   return (
     <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-      <BackBar href={resultHref} />
+      <BackBar />
       <div className="max-w-md mx-auto pt-12">
         <div className="mb-2 text-xs text-emerald-400 font-mono">
           TRUSTEE {trusteeIndex} OF {params.totalParties}

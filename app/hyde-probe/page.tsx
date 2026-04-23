@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { protectText, unprotectText } from '@/lib/hyde';
+import { BackBar } from '@/components/BackBar';
 
 type Status =
   | { kind: 'idle' }
@@ -41,6 +42,9 @@ export default function HydeProbe() {
 
   return (
     <main style={{ fontFamily: 'ui-monospace, monospace', padding: '2rem', maxWidth: 640 }}>
+      <div style={{ marginBottom: '1rem' }}>
+        <BackBar />
+      </div>
       <h1>hyde-wasm preflight</h1>
       {status.kind === 'idle' && <p>waiting…</p>}
       {status.kind === 'running' && <p>running…</p>}

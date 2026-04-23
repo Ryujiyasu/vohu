@@ -83,9 +83,16 @@ export default function Dashboard() {
             ]}
           />
           <Tile
-            unlocked
+            unlocked={loggedIn && inWorldApp}
             title="Developer probes"
-            bindings="preflight"
+            bindings="login + World App"
+            lockHint={
+              !loggedIn
+                ? 'Login, then open in World App'
+                : !inWorldApp
+                ? 'Open in World App to unlock'
+                : ''
+            }
             items={[
               { label: 'XMTP — group discovery probe', href: '/xmtp-probe' },
               { label: 'hyde — WASM + ML-KEM round-trip', href: '/hyde-probe' },
