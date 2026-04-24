@@ -83,3 +83,23 @@ Pause after delivering. Let it land.
 ## If the conversation turns investor-shaped
 
 > I'm not pitching a voting app. I'm pitching a thesis: threshold homomorphic aggregation on verified humans is a new category, and that category will have multiple billion-dollar applications on top. Voting is the hello world. Medical matching, compatibility, salary transparency, peer review — same primitive, different surface.
+
+---
+
+## If someone mentions MACI
+
+> MACI is the governance primitive for token holders. vohu is the governance primitive for verified humans. Same cryptographic lineage — threshold decryption, privacy-preserving tally. Different identity premise: MACI assumes one Ethereum key per person operationally. vohu lets World ID prove biological uniqueness at the protocol layer. Vitalik's February 2026 pivot to endorsing anonymous governance is independent validation that the thesis is right — we're just extending it to everyone who doesn't hold an Ethereum key.
+
+---
+
+## If someone asks about market strategy
+
+> Taiwan first, then Japan. Taiwan because World ID is already live there, the civic-tech ecosystem is the most mature in the world (vTaiwan, g0v, Audrey Tang's Plurality work), and foreign disinformation pressure makes private verified voting existential infrastructure, not a feature. Japan second because the My Number Card × World ID integration wires sovereign ID to verified-human credential for 120 million people, and a Taiwan precedent collapses the first-adopter risk in Japanese government conversations.
+
+---
+
+## The quiet strategic beat — mention once if it lands
+
+> Production trust architecture places threshold-decryption nodes in Japan and Taiwan. Two democracies, independent legal jurisdictions, aligned interest in civic-infrastructure integrity. For any individual ballot to leak, both governments would have to cooperatively act against their own citizens. That's the political-infeasibility bar — trust as a property of geopolitics composed with cryptography, not a promise by an operator.
+
+Use sparingly. This is a late-conversation closer, not an opener. It signals "we have thought 5 years ahead" without overreaching.

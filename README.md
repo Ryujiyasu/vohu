@@ -49,6 +49,12 @@ So the layering is:
 
 v1 is what you can actually cast a ballot on today. Everything below v1 is a research roadmap, not a product promise — called out separately so the hackathon demo isn't conflated with the long-term thesis.
 
+### Trust anchor — Japan + Taiwan threshold trustees
+
+The v2 "distributed trustees" row above is not just an engineering abstraction. The configuration we are building toward places threshold-decryption nodes in **Japan and Taiwan** plus one or more independent academic / nonprofit trustees, under a `k-of-n` scheme. Two democracies, two independent legal jurisdictions, aligned interest in civic-infrastructure integrity, no history of joint surveillance against civil society. For an individual ballot to leak, both governments would need to cooperatively act against their own citizens — a political infeasibility bar we can actually articulate.
+
+This is trust as a *property of geopolitics composed with cryptography*, not a promise by an operator. It is also the most honest answer to the question "who should hold the keys to a voting primitive that will eventually carry civic polls on World ID credentials across East Asia": not us, not a single foundation, but a geopolitically diversified set whose defection cost is measured in state-level reputation.
+
 ---
 
 ## Why now
@@ -58,6 +64,18 @@ April 17, 2026 — one week before World Build 3 — World ID 4.0 shipped with a
 What that means for an aggregation primitive: every verified human on World will soon carry a container of signed attributes. An identity container without an aggregation layer is half a system — a ballot can be cast, but a salary median, an HLA-compatibility check, a survey-of-surveys, or an organ-donor match cannot run without someone reconstituting the plaintext pool the identity layer was supposed to protect.
 
 **Identity layer: World. Aggregation layer: vohu.** Voting is the first application; it's the cleanest proof that the math holds in production. Matching, threshold coordination, and sensitive-attribute compatibility are the same primitive on different application surfaces, and every one of them becomes reachable as the credential registry fills out.
+
+### Go-to-market: the East Asia path
+
+The primitive's first market is not the US and not the EU. It is **Taiwan, then Japan**.
+
+**Taiwan first (2026 H2).** Three conditions line up exactly once: World ID is already live (Orb, Credentials, government-ID integration deployed since 2025); the civic-tech ecosystem is the most mature in the world (g0v, vTaiwan, Pol.is, Join platform, Audrey Tang's Plurality framework); and Taiwan carries the heaviest foreign-disinformation load of any democracy on the V-Dem index, making ballot secrecy structural infrastructure rather than a feature. The November 2026 local elections are a natural pilot window. vohu is the voting layer of Plurality.
+
+**Japan second (2027).** The My Number Card × World ID integration (live since November 2025) wires a sovereign ID to a verified-human credential for 120M+ citizens; Japanese policy stakeholders have signaled active receptivity to World-ID-based infrastructure; and a Taiwan precedent collapses the first-adopter risk that normally slows Japanese government conversations. The path to national-scale deployment is unusually short.
+
+**Korea, EU, US follow** once the East Asian proof points are established and the threshold-trustee architecture is distributed across Japan and Taiwan nodes (see *Trust anchor* above).
+
+This is not speculation: every technical component the path requires already exists in production. The remaining work is political sequencing and a successful pilot — which is the actual next five years of building, not a marketing slide.
 
 ---
 
@@ -452,6 +470,12 @@ Prior art in privacy-preserving voting falls into three mature camps. vohu does 
 - **Receipt-freeness**: MACI's key-rotation-based bribery resistance is stronger than anything vohu has today. v2 will add hyde-bound receipts (the *receipt* is device-bound so it can't be forwarded to a coercer).
 - **Scale**: Vocdoni DAVINCI targets national elections. MACI has production deployments (clr.fund). vohu is a hackathon MVP — near-term targets are small-to-medium DAOs, World Chat community votes, workplace governance.
 - **Post-quantum**: Paillier is RSA-class. MACI's SNARK side is also classical. For long-term ballot secrecy against future quantum adversaries, v2 migrates to a lattice-based HE via `plat`.
+
+### vohu vs MACI — one crisp framing
+
+Since MACI is the reference everyone in this space already knows: **MACI is the governance primitive for token holders. vohu is the governance primitive for verified humans.** The cryptographic lineage is shared (threshold decryption + privacy-preserving tally); the identity premise is not. MACI assumes one Ethereum key per person and relies on that assumption operationally. vohu assumes nothing about keys and lets World ID prove biological uniqueness at the protocol layer.
+
+Vitalik's February 2026 shift — explicitly endorsing anonymous governance via MACI for Ethereum decision-making, after years of public scepticism of anonymity — is independent validation that private voting is becoming essential decentralised-systems infrastructure. vohu extends that thesis to the broader internet, where the constraint "must hold an Ethereum key" would exclude 99% of potential participants.
 
 ### One-liner for the pitch
 
