@@ -424,6 +424,7 @@ Same crypto ecosystem (`hyde` + `janus`), packaged as a Linux FIDO2 / WebAuthn a
 - [`hyde-webauthn`](https://gitlab.com/Ryujiyasu/hyde-webauthn) — virtual FIDO2 authenticator for Linux.
 - [`argo`](https://gitlab.com/Ryujiyasu/argo) — zero-knowledge proof wrapper over halo2 / arkworks / risc0. Ships vohu's `vohu.ballot-validity.v1` statement shape; wired today via `/argo-probe` with the mock backend, swapping in a real backend is a config change.
 - [`plat`](https://gitlab.com/Ryujiyasu/plat) — FHE / GPU-accelerated private computation (vohu's future tally layer).
+- [`niobi`](https://github.com/Ryujiyasu/niobi) — the other application on the same primitive. Privacy-preserving liver-transplant matching: each hospital keeps patient and donor data encrypted under `hyde`'s TPM layer, compatibility scores are computed under FHE via `plat` without revealing any raw medical attribute, and `argo` produces zero-knowledge proofs that a pair actually matches — while quantum annealing searches the full compatibility matrix for the system-wide optimum. Same crypto substrate as vohu; different surface (medical aggregation vs. civic aggregation). Submitted to NEDO Challenge Q-2. This is the clearest existing proof that vohu's "voting is the hello world" framing is not rhetorical — the primitive already has a second application.
 
 ## Related work and vohu's position
 

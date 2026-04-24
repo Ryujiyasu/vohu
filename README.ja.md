@@ -383,6 +383,7 @@ v1 の既知の制約（明示）:
 - [`hyde-webauthn`](https://gitlab.com/Ryujiyasu/hyde-webauthn) — Linux 用仮想 FIDO2 authenticator
 - [`argo`](https://gitlab.com/Ryujiyasu/argo) — halo2 / arkworks / risc0 の ZKP ラッパー。vohu の `vohu.ballot-validity.v1` statement 形状を定義、現在は mock backend 経由で `/argo-probe` に配線済
 - [`plat`](https://gitlab.com/Ryujiyasu/plat) — FHE / GPU 加速プライベート計算（vohu の将来の集計レイヤ）
+- [`niobi`](https://github.com/Ryujiyasu/niobi) — 同じ primitive の別アプリケーション。プライバシー保護 + 量子最適化の肝移植マッチング。各病院は患者・ドナーデータを `hyde` の TPM 層で暗号化したまま保持し、適合スコアは `plat` の FHE で（生の医療属性を一切見せずに）計算、`argo` が「このペアは適合する」の ZK 証明を出し、量子アニーリングが適合行列全体からシステム最適解を探索する。vohu と同じ暗号基盤で、面が違う（市民的集計 vs 医療的集計）。NEDO Challenge Q-2 提出。**vohu の「投票は hello world」というフレーミングが修辞ではなく実体である最強の証拠** — primitive の 2 つ目の応用が既に存在している
 
 ## 関連研究との比較
 
