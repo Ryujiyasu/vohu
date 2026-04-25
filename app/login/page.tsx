@@ -1,45 +1,30 @@
 'use client';
 
+// Two-mode login. In World App we run MiniKit verify (Orb proof, in-webview).
+// In any other browser we cannot do the IDKit v4 RP-signed QR flow because
+// vohu is registered as a Mini App and the bridge route rejects Mini-App
+// app IDs from non-World-App entry points — World App returns a generic
+// "問題が発生しました" rather than a typed error. So Chrome users get a
+// deep link into World App instead of a doomed QR.
+
 import { Suspense, useState } from 'react';
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
-import {
-  IDKitRequestWidget,
-  orbLegacy,
-  type IDKitResult,
-  type RpContext,
-} from '@worldcoin/idkit';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useInVerifiedHumanContext } from '@/lib/prome';
 
-function extractNullifier(result: IDKitResult): string | null {
-  // v3/v4 result: responses[] has { nullifier } (hex string).
-  if ('responses' in result && Array.isArray(result.responses)) {
-    const first = result.responses[0];
-    if (first && 'nullifier' in first && typeof first.nullifier === 'string') {
-      return first.nullifier;
-    }
-  }
-  return null;
-}
+const APP_ID = process.env.NEXT_PUBLIC_APP_ID!;
+const MINIAPP_DEEP_LINK = `https://world.org/mini-app?app_id=${APP_ID}`;
 
 function LoginInner() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [idkitOpen, setIdkitOpen] = useState(false);
-  const [rpContext, setRpContext] = useState<RpContext | null>(null);
-  const [preparingRp, setPreparingRp] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHuman = useInVerifiedHumanContext();
 
   const nextUrl = searchParams.get('next') ?? '/';
   const action = process.env.NEXT_PUBLIC_ACTION_ID!;
-
-  const finish = (nullifier: string) => {
-    sessionStorage.setItem('nullifier', nullifier);
-    router.push(nextUrl);
-  };
 
   const handleMiniKitVerify = async () => {
     setError(null);
@@ -64,7 +49,8 @@ function LoginInner() {
             verification_level: payload.verification_level,
           }),
         );
-        finish(payload.nullifier_hash);
+        sessionStorage.setItem('nullifier', payload.nullifier_hash);
+        router.push(nextUrl);
       } else {
         setError('Verification did not complete.');
       }
@@ -74,44 +60,6 @@ function LoginInner() {
     } finally {
       setVerifying(false);
     }
-  };
-
-  const handleStartIDKit = async () => {
-    setError(null);
-    setPreparingRp(true);
-    try {
-      const res = await fetch('/api/rp-signature', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? `rp-signature failed: ${res.status}`);
-      }
-      const { sig, nonce, created_at, expires_at } = await res.json();
-      setRpContext({
-        rp_id: process.env.NEXT_PUBLIC_RP_ID!,
-        nonce,
-        created_at,
-        expires_at,
-        signature: sig,
-      });
-      setIdkitOpen(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'RP signature failed');
-    } finally {
-      setPreparingRp(false);
-    }
-  };
-
-  const handleIDKitSuccess = (result: IDKitResult) => {
-    const n = extractNullifier(result);
-    if (!n) {
-      setError('World ID returned no nullifier.');
-      return;
-    }
-    finish(n);
   };
 
   return (
@@ -142,39 +90,32 @@ function LoginInner() {
             {verifying ? 'Verifying…' : 'Verify with World ID'}
           </button>
           <p className="mt-6 text-xs text-slate-500 max-w-xs text-center">
-            In World App · Orb verification via MiniKit
+            Orb verification via MiniKit
           </p>
         </>
       )}
 
       {isHuman === false && (
-        <>
-          <button
-            onClick={handleStartIDKit}
-            disabled={preparingRp}
-            className="px-8 py-4 bg-white text-black rounded-full font-semibold disabled:opacity-50 active:scale-95 transition-transform"
+        <div className="flex flex-col items-center max-w-xs text-center">
+          <a
+            href={MINIAPP_DEEP_LINK}
+            className="px-8 py-4 bg-white text-black rounded-full font-semibold active:scale-95 transition-transform"
           >
-            {preparingRp ? 'Preparing…' : 'Verify with World ID (scan QR)'}
-          </button>
-          {rpContext && (
-            <IDKitRequestWidget
-              app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-              action={action}
-              rp_context={rpContext}
-              allow_legacy_proofs={true}
-              preset={orbLegacy({})}
-              open={idkitOpen}
-              onOpenChange={setIdkitOpen}
-              onSuccess={handleIDKitSuccess}
-              onError={code => setError(`IDKit error: ${code}`)}
-            />
-          )}
-          <p className="mt-6 text-xs text-slate-400 max-w-xs text-center leading-relaxed">
-            Scan the QR with World App to verify. Identity unlocks Chrome-viewable
-            surfaces (aggregate results). Vote casting still requires opening
-            vohu inside World App — that&apos;s the runtime binding.
+            Open in World App
+          </a>
+          <p className="mt-6 text-xs text-slate-400 leading-relaxed">
+            Voting requires the World App runtime — that&apos;s the binding
+            that makes the proof of personhood actually one-human-one-vote.
+            Aggregate results stay viewable in this browser without
+            logging in; only ballot casting needs the App.
           </p>
-        </>
+          <Link
+            href="/"
+            className="mt-6 text-xs text-emerald-400 font-mono"
+          >
+            ← back to results
+          </Link>
+        </div>
       )}
 
       {error && (

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { obfuscate } from '@/lib/prome';
 import { DEMO_PROPOSAL, Proposal, ProposalPhase } from '@/lib/proposal';
 
 interface TallyResponse {
@@ -34,18 +33,10 @@ function formatCountdown(ms: number): string {
 
 export default function ResultPage() {
   const { proposalId } = useParams<{ proposalId: string }>();
-  const [nullifier, setNullifier] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [data, setData] = useState<TallyResponse | null>(null);
   const [showServerView, setShowServerView] = useState(false);
 
   useEffect(() => {
-    setNullifier(sessionStorage.getItem('nullifier'));
-    setAuthChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (!nullifier) return;
     const load = () =>
       fetch(`/api/tally?proposalId=${encodeURIComponent(proposalId)}`)
         .then(r => r.json())
@@ -54,43 +45,7 @@ export default function ResultPage() {
     load();
     const id = setInterval(load, 4000);
     return () => clearInterval(id);
-  }, [proposalId, nullifier]);
-
-  if (!authChecked) {
-    return (
-      <main className="min-h-screen p-6 bg-gradient-to-b from-slate-900 to-black text-white">
-        <p className="pt-12 text-center text-slate-400">…</p>
-      </main>
-    );
-  }
-
-  // Identity-bound gate: aggregate tally is safe for Chrome-after-login,
-  // but strangers don't get even aggregates. Runtime binding (prome) is not
-  // required here because the aggregate reveals no individual ballot.
-  if (!nullifier) {
-    const cipher = obfuscate(
-      `Results for ${proposalId}\nEncrypted ballots\nTally`.repeat(8),
-    );
-    return (
-      <main className="min-h-screen bg-black text-emerald-400 font-mono p-6 pb-40">
-        <pre className="whitespace-pre-wrap break-words text-xs opacity-70">
-          {cipher}
-        </pre>
-        <div className="fixed bottom-8 left-0 right-0 text-center text-white font-sans px-6">
-          <p className="mb-2">Results are visible to verified humans.</p>
-          <p className="text-sm text-slate-400 mb-6">
-            Aggregate only — no individual ballot is revealed.
-          </p>
-          <Link
-            href={`/login?next=${encodeURIComponent(`/result/${proposalId}`)}`}
-            className="inline-block px-6 py-3 bg-white text-black rounded-full font-semibold"
-          >
-            Login
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  }, [proposalId]);
 
   if (!data) {
     return (
