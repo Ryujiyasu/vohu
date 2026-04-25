@@ -1,13 +1,10 @@
 // XMTP signer that delegates to MiniKit.
 //
-// XMTP's browser-sdk expects a signer with:
-//   - getIdentifier(): returns { identifier, identifierKind }
-//   - signMessage(message: string): returns Uint8Array
-//
-// We wrap MiniKit's walletAuth (to establish the user's Ethereum address once)
-// and signMessage (to sign the installation + group ops XMTP will need later).
-// Each signMessage call surfaces the World App's native signing sheet to the
-// user — inconvenient but honest.
+// World App wallets are smart contract wallets on World Chain, so MiniKit's
+// signMessage returns an EIP-1271 signature, not a raw ECDSA signature. We
+// must therefore declare type: 'SCW' and provide the chain id — declaring
+// 'EOA' makes XMTP ecrecover the signature, get the wrong address, and bail
+// out with SignatureRequestError(UnknownSigner).
 
 'use client';
 
@@ -43,14 +40,18 @@ export async function getUserAddress(): Promise<string> {
   return address;
 }
 
-/** Build an XMTP signer backed by MiniKit for the given EOA address. */
+/** World Chain mainnet chain id — the chain the World App wallet lives on. */
+const WORLD_CHAIN_ID = 480n;
+
+/** Build an XMTP signer backed by MiniKit for the given SCW address. */
 export function createMiniKitSigner(address: string): Signer {
   return {
-    type: 'EOA',
+    type: 'SCW',
     getIdentifier: () => ({
       identifier: address.toLowerCase(),
       identifierKind: IdentifierKind.Ethereum,
     }),
+    getChainId: () => WORLD_CHAIN_ID,
     signMessage: async (message: string) => {
       const res = await MiniKit.commandsAsync.signMessage({ message });
       const payload = res.finalPayload;
