@@ -4,8 +4,21 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { MiniKit } from '@worldcoin/minikit-js';
-import { verifyMessage } from 'viem';
+import { createPublicClient, http } from 'viem';
+import { verifyMessage } from 'viem/actions';
 import { useInVerifiedHumanContext } from '@/lib/prome';
+
+// World App wallets are SCWs on World Chain — verifyMessage must round-trip
+// through EIP-1271 (isValidSignature) on chain rather than ECDSA recovery.
+const worldChainClient = createPublicClient({
+  chain: {
+    id: 480,
+    name: 'World Chain',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] } },
+  },
+  transport: http(),
+});
 import {
   Receipt,
   buildChallengeMessage,
@@ -43,7 +56,7 @@ export default function ReceiptPage() {
         setProof({ kind: 'failed', reason: 'signing rejected' });
         return;
       }
-      const recovered = await verifyMessage({
+      const recovered = await verifyMessage(worldChainClient, {
         address: receipt.address as `0x${string}`,
         message: challenge,
         signature: payload.signature as `0x${string}`,
