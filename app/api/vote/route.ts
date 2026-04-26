@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCloudProof, VerificationLevel } from '@worldcoin/minikit-js';
+import { VerificationLevel } from '@worldcoin/minikit-js';
 import { verifyMessage } from 'viem';
 import { ballotCount, submitBallot } from '@/lib/store';
 import { getProposal, proposalPhase } from '@/lib/proposal';
@@ -127,54 +127,55 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const appId = process.env.NEXT_PUBLIC_APP_ID as `app_${string}` | undefined;
   const action = process.env.NEXT_PUBLIC_ACTION_ID;
-  if (!appId || !action) {
+  const rpId = process.env.NEXT_PUBLIC_RP_ID;
+  if (!action || !rpId) {
     return NextResponse.json(
-      { error: 'server missing app_id / action_id env' },
+      { error: 'server missing action_id / rp_id env' },
       { status: 500 },
     );
   }
-  const proofResult = await verifyCloudProof(worldIdProof, appId, action);
-  if (!proofResult.success) {
-    const code = proofResult.code ?? 'unknown';
-    // Map World ID's cloud-side codes to user-facing errors. The most
-    // common hit in practice is max_verifications_reached — the World ID
-    // action has a per-human verification cap that's orthogonal to
-    // vohu's per-proposal nullifier dedup, so an already-voted human
-    // looks to the cloud like a second verification attempt.
-    let error: string;
-    let status = 401;
-    switch (code) {
-      case 'max_verifications_reached':
-      case 'already_signed_up':
-        error =
-          "This World ID has already voted on this action. Each human can cast one ballot per World ID action; vohu's proposal-level dedup is separate. Raise the action's 'Max verifications per user' in the Developer Portal to allow re-verification across proposals.";
-        status = 409;
-        break;
-      case 'invalid_merkle_root':
-      case 'root_too_old':
-        error =
-          'World ID identity tree has rotated since you verified. Log out and verify again.';
-        break;
-      case 'invalid_proof':
-        error =
-          'World ID proof is cryptographically invalid — client likely tampered with the payload.';
-        break;
-      case 'invalid_credential_type':
-        error =
-          'The action is configured for a different verification level than what the client produced.';
-        break;
-      default:
-        error = `World ID verification rejected with code "${code}".`;
-    }
+  // World ID 4.0 (Managed mode) verification path:
+  // POST the IDKit-shaped legacy-v3 envelope to the v4 endpoint scoped by
+  // rp_id. The legacy /api/v2/verify endpoint at developer.worldcoin.org no
+  // longer recognises actions registered under the new v4 portal, so a
+  // direct fetch is mandatory — verifyCloudProof would 404 with
+  // "Action not found".
+  const idkitPayload = {
+    protocol_version: '3.0' as const,
+    nonce: crypto.randomUUID(),
+    action,
+    environment: 'production' as const,
+    responses: [
+      {
+        identifier:
+          worldIdProof.verification_level === VerificationLevel.Orb
+            ? 'orb'
+            : 'device',
+        signal_hash:
+          '0x00c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a4',
+        proof: worldIdProof.proof,
+        merkle_root: worldIdProof.merkle_root,
+        nullifier: worldIdProof.nullifier_hash,
+      },
+    ],
+  };
+  const verifyRes = await fetch(
+    `https://developer.world.org/api/v4/verify/${rpId}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(idkitPayload),
+    },
+  );
+  if (!verifyRes.ok) {
+    const detail = await verifyRes.text().catch(() => '');
     return NextResponse.json(
       {
-        error,
-        code,
-        detail: proofResult.detail ?? null,
+        error: `World ID verification failed (HTTP ${verifyRes.status})`,
+        detail,
       },
-      { status },
+      { status: 401 },
     );
   }
 
