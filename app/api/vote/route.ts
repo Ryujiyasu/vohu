@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VerificationLevel } from '@worldcoin/minikit-js';
-import { verifyMessage } from 'viem';
+import { createPublicClient, http } from 'viem';
+import { verifyMessage } from 'viem/actions';
 import { ballotCount, submitBallot } from '@/lib/store';
 import { getProposal, proposalPhase } from '@/lib/proposal';
 import { attributionMessage } from '@/lib/attribution';
 import { buildReceiptMessage } from '@/lib/receipt';
+
+// World Chain mainnet (chain id 480) — World App wallets are smart contract
+// wallets deployed here, so signature verification must round-trip through
+// EIP-1271 (isValidSignature) rather than ECDSA recovery.
+const worldChainClient = createPublicClient({
+  chain: {
+    id: 480,
+    name: 'World Chain',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] } },
+  },
+  transport: http(),
+});
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -212,7 +226,7 @@ export async function POST(req: NextRequest) {
   });
   let sigOk = false;
   try {
-    sigOk = await verifyMessage({
+    sigOk = await verifyMessage(worldChainClient, {
       address: deviceAddress as `0x${string}`,
       message: expectedMessage,
       signature: deviceSignature as `0x${string}`,
@@ -256,7 +270,7 @@ export async function POST(req: NextRequest) {
     const expected = attributionMessage(proposal.id, address, a.nonce);
     let ok = false;
     try {
-      ok = await verifyMessage({
+      ok = await verifyMessage(worldChainClient, {
         address: a.address as `0x${string}`,
         message: expected,
         signature: a.signature,
