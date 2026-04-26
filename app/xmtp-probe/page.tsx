@@ -147,14 +147,20 @@ export default function XmtpProbePage() {
             <div className="text-emerald-400 text-sm font-sans font-semibold">
               ✓ XMTP client connected
             </div>
-            <div>
+            <div className="break-all">
               <span className="text-slate-500">address:</span>{' '}
-              {status.address.slice(0, 14)}…
+              {status.address}
             </div>
-            <div>
+            <div className="break-all">
               <span className="text-slate-500">inboxId:</span>{' '}
-              {status.inboxId.slice(0, 14)}…
+              {status.inboxId}
             </div>
+            <button
+              onClick={() => navigator.clipboard.writeText(status.address)}
+              className="text-[11px] text-emerald-400 underline"
+            >
+              copy address
+            </button>
             <div>
               <span className="text-slate-500">groups:</span>{' '}
               {status.groupCount}
